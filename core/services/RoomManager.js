@@ -169,7 +169,6 @@ class RoomManager {
       socket.join(roomID);
       socket.data.roomId = roomID;
       socket.data.pseudo = pseudo;
-       socket.data.playerId = playerId;
       let player = PlayerManager.createPlayerOBject(
         {
           position: gameData.data.players.length + 1,
@@ -182,7 +181,7 @@ class RoomManager {
       );
       let playerId = player.id;
 
-     
+      socket.data.playerId = playerId;
       gameData.data.players.push(player);
       MessagerieManager.addMessage(gameData, socket, {
         content: pseudo + " a rejoint la partie",

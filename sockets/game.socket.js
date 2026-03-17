@@ -66,7 +66,7 @@ export default class GameSocket {
       gameSocket.debug("Get value from frontend ");
       LoggerClass.objectToString(event);
       LoggerClass.objectToString(obj);
-      if (!params.insertedValue) {
+      if (!obj.insertedValue) {
         new AppError(socket, "Inserted value is missing", {
               code: "VALUE_MISSING",
               details: { roomId },
