@@ -16,7 +16,7 @@ export default class Parser {
     if (TypeManager.isBool(exp)) {
       return "bool";
     }
-    if (TypeManager.getType(exp) === "number" && parseInt(exp)) {
+    if (TypeManager.getType(exp) === "number" ) {
       return "int";
     }
     if (typeof exp !== "string") {

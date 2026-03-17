@@ -75,11 +75,16 @@ export default class PlayerManager {
     return null;
   }
 
-  static createPlayerOBject(baseObecjt, globalValueOFPlayer) {
+  static createPlayerOBject(baseObecjt, globalValueOFPlayer,gainList) {
+    let gainObject = {};
+    for(let gain of gainList){
+      gainObject[gain.id] = {value:0}
+    }
     return {
       // order in list is the order of turn
       ...baseObecjt,
       ...globalValueOFPlayer,
+      gain : {type:"object", value:gainObject},
       handDeck: { type: "cardList", value: [] }, //card id
       personalHandDeck: { type: "cardList", value: [] }, //card id
       personalHandDiscard: { type: "cardList", value: [] }, // card id

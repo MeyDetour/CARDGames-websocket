@@ -110,6 +110,11 @@ export const Logger = (namespace = "", { level = "debug" } = {}) => {
 };
 
 export class LoggerClass {
+  /*
+    * Pretty print an object with indentation and newlines for better readability.
+    @params obj: The object to pretty print.
+    @params indent: The current indentation level (used for recursive calls).
+  */
   static pretty(obj, indent = 0) {
     const pad = " ".repeat(indent);
     if (Array.isArray(obj)) {

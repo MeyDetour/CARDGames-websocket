@@ -178,6 +178,7 @@ export class ConformiteManager {
         boucle: "string",
         event: "object", // Array
       });
+      
     }
   }
 

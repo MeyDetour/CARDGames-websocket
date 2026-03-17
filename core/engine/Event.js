@@ -36,7 +36,7 @@ export default class Event {
       return null;
     }
     let event = gameData.roomInDb.events["events"].filter(
-      (event) => event.id === id
+      (event) => event.id === id,
     )[0];
 
     if (!event) {
@@ -45,7 +45,7 @@ export default class Event {
       return null;
     }
 
-    Event.ExecuteEvent(event, socket, gameData,params);
+    Event.ExecuteEvent(event, socket, gameData, params);
   }
 
   /**
@@ -59,13 +59,12 @@ export default class Event {
    * @returns {null|void} retourne null si une erreur empêche l'exécution
    */
   static ExecuteEvent(event, socket, gameData, params = {}) {
-     
     if (!gameData) {
       eventLogger.error("Game Data is undefined");
       LoggerClass.logFileLocalisation();
       errorStack.addError(
         "Game Data is undefined in Event.ExecuteEvent",
-        LoggerClass.getFileLocalisation()
+        LoggerClass.getFileLocalisation(),
       );
 
       return null;
@@ -75,7 +74,7 @@ export default class Event {
       LoggerClass.logFileLocalisation();
       errorStack.addError(
         "Event is undefined in Event.ExecuteEvent",
-        LoggerClass.getFileLocalisation()
+        LoggerClass.getFileLocalisation(),
       );
 
       return null;
@@ -87,7 +86,7 @@ export default class Event {
     let conditionOfEvent = Parser.translateInnerExpression(
       event.condition,
       gameData,
-      { ...params}
+      { ...params },
     );
 
     if (conditionOfEvent === false) {
@@ -111,17 +110,18 @@ export default class Event {
     const skipEventLog = false;
     const resultOfEventsLog = true;
 
-    const fileLogger = EventFileLogger.create(event);
+    const fileLogger = EventFileLogger.create(event,gameData.roomId);
 
     eventLogger.info(
-      `🟢 Event exécuté (${fileLogger.order}) : ${event.name} → ${fileLogger.filepath}`
+      `🟢 Event exécuté (${fileLogger.order}) : ${event.name} → ${fileLogger.filepath}`,
     );
-    fileLogger.log(LoggerClass.pretty(event)); 
+    fileLogger.log(LoggerClass.pretty(event));
     params.location = fileLogger;
     LoggerClass.objectToString(event);
 
     let action = this.getAction(event, gameData);
-    let value = this.getValue(event, gameData);
+    let value = this.getValue(event);
+    console.log("value of event :" + value);
     let giveElements = this.getGiveElements(event, gameData);
 
     const actionObject = new Action(
@@ -146,7 +146,7 @@ export default class Event {
         skipEventLog: skipEventLog,
       },
       params,
-      null
+      null,
     );
     if (event["boucle"]) {
       let elts = Parser.translateInnerExpression(event["boucle"], gameData, {
@@ -159,23 +159,30 @@ export default class Event {
       if (Array.isArray(elts)) {
         for (let i = 0; i < elts.length; i++) {
           fileLogger.log("I In boucle :>> ", i);
-          
+
           let destinataireListObject, destinataire;
           let senderListObject, sender;
           [destinataireListObject, destinataire] = this.getDestinataireElement(
-            event ,
+            event,
             gameData,
             i,
-            params
+            params,
           );
           let conditionOfEvent = Parser.translateInnerExpression(
-              event.condition,
-              gameData,
-              { ...params}
+            event.condition,
+            gameData,
+            { ...params },
           );
-          if(TypeManager.isDefined( conditionOfEvent) && conditionOfEvent === false){
-              eventLogger.warn("player doest not satisfied condition "+event.event.condition+" ")
-              continue
+          if (
+            TypeManager.isDefined(conditionOfEvent) &&
+            conditionOfEvent === false
+          ) {
+            eventLogger.warn(
+              "player doest not satisfied condition " +
+                event.event.condition +
+                " ",
+            );
+            continue;
           }
           if (PlayerManager.isPlayerType(destinataire, gameData)) {
             destinataire = structuredClone(destinataire);
@@ -184,7 +191,7 @@ export default class Event {
             event,
             gameData,
             i,
-            params
+            params,
           );
 
           if (PlayerManager.isPlayerType(sender, gameData)) {
@@ -198,9 +205,8 @@ export default class Event {
           const conidtion = this.getboucleCondition(event, gameData, params);
 
           if (!conidtion) {
-            eventLogger.warn(
-              "Condition is false, skipping iteration. Maybe Player  doesnot respect condition"
-            );
+            fileLogger.log("Condition false for player : ");
+            fileLogger.log(LoggerClass.pretty(destinataire));
             eventLogger.debug("condition :>> ", event.event.condition);
 
             continue;
@@ -217,7 +223,7 @@ export default class Event {
                 GiveElements: giveElements,
               },
               `STUDY ELEMENT ${i}`,
-              this.fileLogger
+              this.fileLogger,
             );
           }
 
@@ -242,13 +248,13 @@ export default class Event {
           "Cannot obtain array with value " +
             event["boucle"] +
             "with event ID=" +
-            event["id"]
+            event["id"],
         );
         eventLogger.warn(
           "Cannot obtain array with value " +
             event["boucle"] +
             "with event ID=" +
-            event["id"]
+            event["id"],
         );
         return null;
       }
@@ -261,13 +267,13 @@ export default class Event {
         event,
         gameData,
         null,
-        params
+        params,
       );
       [senderListObject, sender] = this.getSenderElement(
         event,
         gameData,
         null,
-        params
+        params,
       );
       actionObject.setDestinataireListObject(destinataireListObject);
       actionObject.setDestinataire(destinataire);
@@ -284,7 +290,7 @@ export default class Event {
           GiveElements: giveElements,
         },
         `STUDY ELEMENT NOT IN BOUCLE`,
-        this.fileLogger
+        this.fileLogger,
       );
 
       if (giveElements && destinataire) {
@@ -301,7 +307,7 @@ export default class Event {
             resultOfEventsLog: resultOfEventsLog,
           },
           params,
-          null
+          null,
         );
       }
       if (action) {
@@ -312,7 +318,13 @@ export default class Event {
           let before = gameData.data.tour;
 
           // change tour before end of tour because it's infinite boucle
-          if (TypeManager.isDefined( gameData.roomInDb.params.tours.maxTour ?gameData.roomInDb.params.tours.maxTour   > gameData.data.tour: true) ){
+          if (
+            TypeManager.isDefined(
+              gameData.roomInDb.params.tours.maxTour
+                ? gameData.roomInDb.params.tours.maxTour > gameData.data.tour
+                : true,
+            )
+          ) {
             GameManager.engine(gameData, socket, {
               ...params,
               event: "onChangeTour",
@@ -321,16 +333,21 @@ export default class Event {
 
           FileLogger.logGridOldNew(before, gameData.data.tour, fileLogger);
         }
-         if (action === "changeManche") {
+        if (action === "changeManche") {
           let before = gameData.data.manche;
 
           // change tour before end of tour because it's infinite boucle
-           if (TypeManager.isDefined( gameData.roomInDb.params.manche.maxManche ?gameData.roomInDb.params.manche.maxManche   > gameData.data.manche : true) ){
+          if (
+            TypeManager.isDefined(
+              gameData.roomInDb.params.manches.max
+                ? gameData.roomInDb.params.manches.max > gameData.data.manche
+                : true,
+            )
+          ) {
             GameManager.engine(gameData, socket, {
               ...params,
               event: "endOfManche",
             });
-       
           }
 
           FileLogger.logGridOldNew(before, gameData.data.manche, fileLogger);
@@ -345,18 +362,20 @@ export default class Event {
         if (action === "askPlayer") {
           socket.emit("askPlayer", { event, params, roomId: gameData.roomId });
           eventLogger.debug(
-            "Ask player action executed, waiting for response..."
+            "Ask player action executed, waiting for response...",
           );
         }
         if (action === "updateGlobalValue") {
           actionObject.updateGlobalValue();
         }
       }
-    } 
-    if (params.originEvent !== "loadDemon" && ( action ? action!=="askPlayer" :true)) {
-     
+    }
+    if (
+      params.originEvent !== "loadDemon" &&
+      (action ? action !== "askPlayer" : true)
+    ) {
       eventLogger.info(
-        "Trigger afterEvent in GameManager.engine From Event ID=" + event.id
+        "Trigger afterEvent in GameManager.engine From Event ID=" + event.id,
       );
       GameManager.engine(gameData, socket, { event: "afterEvent" });
     }
@@ -369,7 +388,7 @@ export default class Event {
           "Trigger afterEvent in GameManager.engine after withValue Event id" +
             eventInWVE.id +
             " of Event ID=" +
-            event.id
+            event.id,
         );
         GameManager.engine(gameData, socket, {
           event: "afterEvent",
@@ -378,7 +397,7 @@ export default class Event {
       }
     }
 
-    if (event.loadMessage) gameData.data.logs.push(event.loadMessage);
+    if (event.loadMessage){ gameData.data.logs.push(event.loadMessage); socket.to(gameData.roomId).emit("updateGameDataLogs", event.loadMessage);}
   }
 
   /**
@@ -396,7 +415,7 @@ export default class Event {
         let list = VariableType.getListSplited(
           event["event"]["for"],
           gameData,
-          null
+          null,
         );
 
         // dans le cas d'une boucle
@@ -453,7 +472,7 @@ export default class Event {
         let list = VariableType.getListSplited(
           event["event"]["from"],
           gameData,
-          params
+          params,
         );
 
         // dans le cas d'une boucle
@@ -499,7 +518,7 @@ export default class Event {
       return Parser.translateInnerExpression(
         event["event"]["value"],
         gameData,
-        params
+        params,
       );
     }
   }
@@ -516,7 +535,7 @@ export default class Event {
       return Parser.translateInnerExpression(
         event["event"]["condition"],
         gameData,
-        { ...params, log: true }
+        { ...params, log: true },
       );
     } else return true;
   }
@@ -545,6 +564,11 @@ export default class Event {
       if (Object.keys(giveObject).length === 0) {
         return null;
       }
+      for (let key of Object.keys(giveObject)) {
+        if (!TypeManager.isDefined(giveObject[key]) || giveObject[key] == 0) {
+          return null;
+        }
+      }
       return giveObject;
     }
     return null;
@@ -552,14 +576,12 @@ export default class Event {
 
   /**
    * Retourne la propriété `value` de l'event si présente.
-   * @param {Object} event
-   * @param {Object} gameData
+   * @param {Object} eventObj - L'objet complet contenant la clé 'event'
    * @returns {*|undefined}
    */
-  static getValue(event, gameData) {
-    if (event["event"]["value"]) {
-      return event["event"]["value"];
-    }
+  static getValue(eventObj) {
+    // On vérifie si eventObj existe, puis si la clé event existe, puis si value existe
+    return eventObj?.event?.value;
   }
 
   /**
@@ -591,7 +613,7 @@ export default class Event {
         let newParam = Parser.translateInnerExpression(
           shortWithValueEvent[key],
           gameData,
-          { ...params}
+          { ...params },
         );
         if (!TypeManager.isDefined(newParam)) {
           new AppError(
@@ -599,14 +621,14 @@ export default class Event {
             "Cannot get value for key " +
               key +
               " with " +
-              shortWithValueEvent[key]
+              shortWithValueEvent[key],
           );
           LoggerClass.logFileLocalisation();
           eventLogger.warn(
             "Cannot get value for key " +
               key +
               " with " +
-              shortWithValueEvent[key]
+              shortWithValueEvent[key],
           );
           return null;
         }
@@ -630,7 +652,7 @@ export default class Event {
     }
 
     let event = gameData.roomInDb.events["withValueEvent"].filter(
-      (event) => event.id == shortWithValueEvent.id
+      (event) => event.id == shortWithValueEvent.id,
     )[0];
     if (!event) {
       const msg = "Event not found! ID=" + withValueEvent.id;

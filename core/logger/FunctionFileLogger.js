@@ -2,13 +2,14 @@ import fs from "fs";
 import path from "path";
 import { Logger, LoggerClass } from "./logger.js";
 import Identificator from "../services/helper/Identificator.js";
+import { TypeManager } from "../services/helper/TypeManager.js";
 
 const LOG_DIR = "./logs";
 const functionFileLoggerLogger = Logger("FunctionFileLogger");
 
 export default class FunctionFileLogger {
   static create(condition) {
-    if (!condition) {
+    if (!TypeManager.isDefined(condition)) {
       functionFileLoggerLogger.error(
         "ActionFileLogger.create called with undefined condition"
       );

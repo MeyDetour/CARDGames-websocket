@@ -54,6 +54,7 @@ class RoomManager {
       } catch (e) {}
       return;
     }
+
     if (!socket) {
       const msg = "No socket provided to RoomManager.createRoom";
       roomLogger.error(msg);
@@ -73,6 +74,8 @@ class RoomManager {
         id: Identificator.generateId(), // id concerne la room, aucun joueur n'a le meme id dans cette room pusiqu'elle vient d'etre crée
       },
       gameInDB["playerGlobalValue"],
+
+      gameInDB["assets"]["gains"]
     );
 
     // generate room Id
@@ -112,16 +115,18 @@ class RoomManager {
       content: pseudo + " a crée la partie",
     });
 
-    let playerId = player.id;
-    socket.emit("roomCreated", { gameData, playerId });
+    socket.emit("roomCreated", { gameData, player });
     socket.to(roomID).emit("playerHasJoinedRoom", gameData);
   }
 
   sendGameChangeSignal(roomID) {
     let gameData = this.getRoom(roomID);
     if (gameData) {
-      for (let p of gameData.data.players) {
-        io.to(p.socketID).emit("gameChanges", gameData);
+      for (let currentPlayer of gameData.data.players) {
+        io.to(currentPlayer.socketID).emit("gameChanges", {
+          gameData,
+          currentPlayer,
+        });
       }
     }
   }
@@ -164,6 +169,7 @@ class RoomManager {
       socket.join(roomID);
       socket.data.roomId = roomID;
       socket.data.pseudo = pseudo;
+       socket.data.playerId = playerId;
       let player = PlayerManager.createPlayerOBject(
         {
           position: gameData.data.players.length + 1,
@@ -172,17 +178,18 @@ class RoomManager {
           id: Identificator.generateId(), // id concerne la room, aucun joueur n'a le meme id dans cette room pusiqu'elle vient d'etre crée
         },
         gameData.roomInDb["playerGlobalValue"],
+        gameData.roomInDb.assets.gains,
       );
       let playerId = player.id;
 
-      socket.data.playerId = playerId;
+     
       gameData.data.players.push(player);
       MessagerieManager.addMessage(gameData, socket, {
         content: pseudo + " a rejoint la partie",
       });
 
       PlayerManager.reORderPlayerPosition(gameData);
-      socket.emit("roomJoined", { gameData, playerId });
+      socket.emit("roomJoined", { gameData, player });
       socket.to(roomID).emit("playerHasJoinedRoom", gameData);
     } else {
       const msg = "Join room failed: Id incorrect -> " + roomID;

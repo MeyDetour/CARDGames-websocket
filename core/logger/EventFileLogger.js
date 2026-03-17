@@ -6,7 +6,7 @@ import { TypeManager } from "../services/helper/TypeManager.js";
 const LOG_DIR = "./logs";
 
 export default class EventFileLogger {
-  static create(event) {
+  static create(event, roomId) {
     const order = EventExecutionCounter.next();
 
     const safeName = event.name
@@ -23,6 +23,7 @@ export default class EventFileLogger {
       [
         `EVENT EXECUTION`,
         `================`,
+        `Room ID     : ${roomId}`,
         `Order       : ${order}`,
         `Event ID    : ${event.id}`,
         `Event Name  : ${event.name}`,

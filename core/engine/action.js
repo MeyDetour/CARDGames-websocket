@@ -52,7 +52,7 @@ export default class Action {
     const actionLogger = Logger("Action Event ID=" + this.event?.id);
     this.actionLogger = actionLogger;
 
-    if (!this.fileLogger) {
+    if (!TypeManager.isDefined(this.fileLogger)) {
       const msg = "fileLogger is null in Action constructor";
       console.error(msg);
       LoggerClass.logFileLocalisation();
@@ -102,12 +102,26 @@ export default class Action {
   setBoucleCondition(boucleCondition) {
     this.boucleCondition = boucleCondition;
   }
+  getThisObject() {
+    return {
+      event: this.event,
+      sender: this.sender,
+      senderListObject: this.senderListObject ?"object":null,
+      destinataire: this.destinataire?"object":null,
+      destinataireListObject: this.destinataireListObject ?"object":null,
+      giveElements: this.giveElements,
+      value: this.value,  
+      params: this.params ? LoggerClass.getKeyOfObject(this.params) : null,
+      index: this.index,
+    };
+  }
+
   /**
    * Mélange la collection du destinataire.
    * Si le destinataire est invalide ou n'a pas une valeur tableau, logue et enregistre l'erreur.
    */
   shuffle() {
-    if (!this.destinataire) {
+    if (!TypeManager.isDefined(this.destinataire)) {
       const msg =
         "Cannot apply event <<skipPlayerTour>> without destinataire in event : " +
         this.event["name"] +
@@ -146,7 +160,7 @@ export default class Action {
     return;
   }
   changeStartingPlayer() {
-    if (!this.value) {
+    if (!TypeManager.isDefined(this.value)) {
       const msg =
         "Cannot apply event <<changeStartingPlayer>> without value to indicate sens of changement of player  in event : " +
         this.event["name"] +
@@ -185,7 +199,7 @@ export default class Action {
     this.fileLogger.log("✅ Changement de joueur effectué.");
   }
   skipPlayerTour() {
-    if (!this.destinataire) {
+    if (!TypeManager.isDefined(this.destinataire)) {
       const msg =
         "Cannot apply event <<skipPlayerTour>> without destinataire in event : " +
         this.event["name"] +
@@ -210,17 +224,19 @@ export default class Action {
   }
 
   updateGlobalValue() {
-    if (!this.value) {
+    this.fileLogger.log("Action element :")
+    this.fileLogger.log(LoggerClass.pretty(this.getThisObject()));
+    if (!TypeManager.isDefined(this.value)) {
       const msg =
         "cannot update gloabal value without value. Event id=" + this.event.id;
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
       this.fileLogger.error(new Error(msg), "actions.js → updateGlobalValue()");
 
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg, LoggerClass.logFileLocalisation());
       return;
     }
-    if (!this.destinataire.type) {
+    if (!TypeManager.isDefined(this.destinataire.type)) {
       const msg =
         "cannot update gloabal value without type of destinataire. Event id=" +
         this.event.id;
@@ -228,7 +244,7 @@ export default class Action {
       LoggerClass.logFileLocalisation();
       this.fileLogger.error(new Error(msg), "actions.js → updateGlobalValue()");
 
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg, LoggerClass.logFileLocalisation());
     }
     this.fileLogger.log(
       `🔄 Mise à jour de la valeur globale dans l'événement ID=${this.event["id"]}`

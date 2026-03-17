@@ -4,6 +4,7 @@ import { Socket } from "socket.io";
 import { roomManager } from "./RoomManager.js";
 import PlayerManager from "./PlayerManager.js";
 import ActionManager from "./ActionManager.js";
+import { io } from "../../server.js";
 
 const gameLogger = Logger("Game");
 gameLogger.info("Logger démarrée");
@@ -16,6 +17,7 @@ export default class GameManager {
     gameData.data.logs.push("La partie commence");
     gameData.data.state.value = "inProgress";
     gameLogger.info("EVENTS : Check onGameStart Events");
+    io.to(gameData.roomId).emit("gameStarted", { gameData });
     Conditions.loadDemon(gameData, socket, {
       originEvent: "startOfGame",
     });
@@ -104,14 +106,16 @@ export default class GameManager {
     if (params.event && params.event === "startGame") {
       params = this.startGame(gameData, socket);
     }
-   if (params.event && params.event === "endOfManche") {
+    if (params.event && params.event === "endOfManche") {
       params = this.endOfManche(gameData, socket);
     }
     if (params.event && params.event === "onChangeTour") {
       params = this.changeTour(gameData, socket);
-    }  if (params.event && params.event === "onChangeManche") {
+    }  
+    if (params.event && params.event === "onChangeManche") {
       params = this.onChangeManche(gameData, socket);
-    }  if (params.event && params.event === "startOfManche") {
+    }  
+    if (params.event && params.event === "startOfManche") {
       params = this.startOfManche(gameData, socket);
     }
     if (params.event && params.event === "changeCurrentPlayer") {

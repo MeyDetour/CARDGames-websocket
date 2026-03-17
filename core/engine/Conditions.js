@@ -47,7 +47,10 @@ export default class Conditions {
     conditionLogger.info("Load Demons...");
     let c = 0;
     for (let demon of gameData.roomInDb.events["demons"]) {
-      conditionLogger.debug("====DEMON");
+      if (!demon.name || !demon.condition){
+          continue;
+      }
+      conditionLogger.debug("====DEMON [" + demon.id + "]: " + demon.name);
       let result = null;
       if (demon.boucle) {
         let elts = Parser.translateInnerExpression(
@@ -96,6 +99,10 @@ export default class Conditions {
           ...params,
           eventEmited: params?.originEvent,
         });
+        // un demon appelé par un originEvent (ChangerManche,changertour etc) 
+        // declenche des evenements et demons, eviter de repeter deux fois le
+        //  meme demon alors qu'il n'a pas fini d'executer ses evenements
+        // eviter de repeter deux fois l'evenement si on 
         if (
           params.originEvent &&
           !demon.condition.includes(params.originEvent)
@@ -113,6 +120,7 @@ export default class Conditions {
 
       if (result) {
         conditionLogger.info("le démon est réalisable : " + demon.condition);
+        LoggerClass.objectToString(demon)
 
         for (let id of demon.events) {
           Event.applyEventId(id, socket, gameData, {

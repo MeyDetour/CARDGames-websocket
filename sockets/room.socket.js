@@ -22,12 +22,11 @@ export default class RoomSocket {
         let room = roomManager.getRoom(roomIDUppercase)
         let result = !!room
         let gameId = room ? room.roomInDb.id : null
-      socket.emit("isExistingRoomResult",{roomIDUppercase, result , gameId ,pathOnEchec } );
+      socket.emit("isExistingRoomResult",{roomId : roomIDUppercase, result , gameId ,pathOnEchec } );
     });
     socket.on("newMessageOnmessagerie", (message) => {
       console.log("new message " + message);
-     MessagerieManager.sendMessage(socket, message);
-      
+     MessagerieManager.sendMessage(socket, message); 
     });
   }
 }
