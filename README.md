@@ -109,17 +109,19 @@ graph TD
     subgraph "Noyau Central (Game Engine)"
         GE --> StepCheck{Etape atteinte ? <br/><i>Début, Tour, Manche</i>}
         
-        %% Branche Étapes Clés
+        %% Branche Étapes Spécifiques
         StepCheck -- OUI --> DemonSpecific[Appel du Démon spécifique]
         
-        %% Branche État Global
+        %% Convergence vers le Chargeur
+        DemonSpecific --> DemonLoader
         StepCheck -- NON --> DemonLoader[Chargeur de Démons]
+        
+        %% Logique des Démons d'état
         DemonLoader --> CheckCond{Vérification des <br/>conditions d'état}
         CheckCond -- Remplies --> ExecuteDemon[Exécution des événements <br/><i>Distribuer, Mélanger...</i>]
         CheckCond -- Non Remplies --> PlayerLogic
         
-        DemonSpecific --> PlayerLogic[Calcul des rôles et <br/>actions autorisées]
-        ExecuteDemon --> PlayerLogic
+        ExecuteDemon --> PlayerLogic[Calcul des rôles et <br/>actions autorisées]
     end
 
     %% Sortie
@@ -127,9 +129,9 @@ graph TD
     Broadcast --> Front[Front-end UI]
 
     %% Styles
-    style GE fill:#f96,stroke:#333,stroke-width:2px
-    style DemonLoader fill:#bbf,stroke:#333
-    style StepCheck fill:#fff,stroke:#333
-
-
+    style GE fill:#ff5804,stroke:#333,stroke-width:2px
+    style DemonLoader fill:##4d4dd5,stroke:#333
+    style StepCheck fill:#322635,stroke:#333
+    style CheckCond fill:#322635,stroke:#333
+    style DemonSpecific fill:#efefef,stroke:#333
 ```
