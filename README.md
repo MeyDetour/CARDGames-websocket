@@ -76,3 +76,60 @@ sequenceDiagram
 
 ```
 
+
+
+
+# Fonctionnement du Backend : Le Game Engine et ses Démons
+
+Voici une vue d'ensemble de la logique de notre serveur de jeu. Le cœur du système repose sur un Game Engine (moteur de jeu) qui agit comme le noyau central de l'application.
+
+## Le rôle du Game Engine
+Le Game Engine n'est pas là pour effectuer tous les calculs, mais pour assurer un suivi continu des étapes du jeu (début de partie, changement de tour, fin de manche). Il ordonne les événements et sert de point de contrôle unique. Contrairement aux interactions directes des joueurs, le moteur gère la structure temporelle et logique de la partie.
+
+## Les Démons : Les gardiens de l'état
+Les Démons sont des entités autonomes qui surveillent l'état du jeu. Lorsqu'une condition spécifique est remplie (par exemple : un certain nombre de cartes en main), ils déclenchent un événement automatique : distribuer des cartes, mélanger le deck ou attribuer des jetons.
+
+
+## Le flux d'exécution
+À chaque signal reçu par le serveur WebSocket, le cycle suivant s'enclenche :
+
+- Surveillance des étapes : Le Game Engine vérifie si une étape clé est atteinte (ex: "Fin de tour"). Si c'est le cas, il appelle directement le Démon associé à cette étape.
+
+- Vérification de l'état : Si aucune étape majeure n'est détectée, le moteur sollicite le Chargeur de Démons. Ce dernier parcourt tous les démons pour vérifier si leurs conditions d'activation sont remplies selon l'état actuel des joueurs.
+
+- Gestion des rôles : Le moteur détermine ensuite les rôles des joueurs et les actions autorisées.
+
+- Synchronisation : Enfin, un signal de mise à jour est envoyé à l'interface (Front-end) pour refléter les changements.
+
+```mermaid
+graph TD
+    %% Entrée
+    WS[Signal WebSocket Reçu] --> GE{Game Engine}
+
+    subgraph "Noyau Central (Game Engine)"
+        GE --> StepCheck{Etape atteinte ? <br/><i>Début, Tour, Manche</i>}
+        
+        %% Branche Étapes Clés
+        StepCheck -- OUI --> DemonSpecific[Appel du Démon spécifique]
+        
+        %% Branche État Global
+        StepCheck -- NON --> DemonLoader[Chargeur de Démons]
+        DemonLoader --> CheckCond{Vérification des <br/>conditions d'état}
+        CheckCond -- Remplies --> ExecuteDemon[Exécution des événements <br/><i>Distribuer, Mélanger...</i>]
+        CheckCond -- Non Remplies --> PlayerLogic
+        
+        DemonSpecific --> PlayerLogic[Calcul des rôles et <br/>actions autorisées]
+        ExecuteDemon --> PlayerLogic
+    end
+
+    %% Sortie
+    PlayerLogic --> Broadcast[Broadcast : Mise à jour de l'interface]
+    Broadcast --> Front[Front-end UI]
+
+    %% Styles
+    style GE fill:#f96,stroke:#333,stroke-width:2px
+    style DemonLoader fill:#bbf,stroke:#333
+    style StepCheck fill:#fff,stroke:#333
+
+
+```
