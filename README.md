@@ -129,9 +129,7 @@ graph TD
     Broadcast --> Front[Front-end UI]
 
     %% Styles
-    style GE fill:#ff5804,stroke:#333,stroke-width:2px
-    style DemonLoader fill:##4d4dd5,stroke:#333
+    style GE fill:#ff5804,stroke:#333,stroke-width:2px 
     style StepCheck fill:#322635,stroke:#333
-    style CheckCond fill:#322635,stroke:#333
-    style DemonSpecific fill:#efefef,stroke:#333
+    style CheckCond fill:#322635,stroke:#333 
 ```
