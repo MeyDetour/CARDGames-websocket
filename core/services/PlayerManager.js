@@ -1,6 +1,5 @@
- 
 import { Logger, LoggerClass } from "../logger/logger.js";
-import { errorStack } from "../error/ErrorStack.js"; 
+import { errorStack } from "../error/ErrorStack.js";
 const playerManagerLogger = Logger("PlayerManager");
 export default class PlayerManager {
   //playerPosition 1 - x
@@ -75,16 +74,16 @@ export default class PlayerManager {
     return null;
   }
 
-  static createPlayerOBject(baseObecjt, globalValueOFPlayer,gainList) {
+  static createPlayerOBject(baseObecjt, globalValueOFPlayer, gainList) {
     let gainObject = {};
-    for(let gain of gainList){
-      gainObject[gain.id] = {value:0}
+    for (let gain of gainList) {
+      gainObject[gain.id] = { value: 0 };
     }
     return {
       // order in list is the order of turn
       ...baseObecjt,
       ...globalValueOFPlayer,
-      gain : {type:"object", value:gainObject},
+      gain: { type: "object", value: gainObject },
       handDeck: { type: "cardList", value: [] }, //card id
       personalHandDeck: { type: "cardList", value: [] }, //card id
       personalHandDiscard: { type: "cardList", value: [] }, // card id
@@ -92,6 +91,10 @@ export default class PlayerManager {
       haswin: { type: "boolean", value: false },
       actions: { type: "array", value: [] },
       roles: { type: "array", value: [] },
+      attachedEventForTour: {
+        type: "array",
+        value: [],
+      },
     };
   }
   static #save(playerObject, gameData) {
@@ -189,7 +192,7 @@ export default class PlayerManager {
   }
   static reORderPlayerPosition(gameData) {
     gameData.data.players.forEach((player, index) => {
-      player.position = index + 1;  
+      player.position = index + 1;
     });
     if (
       gameData.data.currentPlayerPosition.value > gameData.data.players.length

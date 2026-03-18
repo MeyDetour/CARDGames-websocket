@@ -1,0 +1,50 @@
+CONDITION EXECUTION
+================
+id : dgi998
+Condition  : comp({currentPlayer#currentBet};isEqualNumber;{currentBet})
+Timestamp   : 2026-03-18T09:31:26.150Z
+Parse call in :
+[ 
+  "    at Conditions.changeLoadActionsForPlayers (file:///home/mey/WebstormProjects/CARDGames-websocket/core/engine/Conditions.js:156:40)",
+  "    at Parser.translateInnerExpression (file:///home/mey/WebstormProjects/CARDGames-websocket/parser/parser.js:98:40)"
+]
+
+// Une comparaison a été detectée comp( a ; isEqualNumber ; b)
+Go to ComparaisonType.splitLogical for comp({currentPlayer#currentBet};isEqualNumber;{currentBet})      
+=====>
+      |  // On étudie la partie a
+      |  Go to VariableType.splitLogical for {currentPlayer#currentBet}
+      |
+      |===> |    // on découpe la variable en fonction du séparateur #
+            |    Split logical list for : ["currentPlayer","currentBet"]
+            |
+            |==>
+                |    // on cherche le joueur qui doit jouer
+                |    VariableType.splitLogicalList processing element: currentPlayer
+                |    Valeur obtenue : [object Object] 
+                |
+                |======>|    // on cherche dans cet objet la clé currentBet
+                        |    VariableType.splitLogicalList processing element: currentBet
+                        |
+                        |==> Valeur obtenue :2
+
+=====>
+      | // On étudie la partie b           
+      | Go to VariableType.splitLogical for {currentBet} 
+      |  
+      |===>|  // on découpe la variable en fonction du séparateur #
+           |  Split logical list for : ["currentBet"]
+           |
+           |==>|    // on cherche dans les données du jeu la clé currentBet
+               |    VariableType.splitLogicalList processing element: currentBet 
+               |
+               |==>Valeur obtenue :2
+
+
+| // Après traduction des deux parties a et b, on effectue la comparaison isEqualNumber
+| Do parseInt on 2
+| Do parseInt on 2
+| After translation: 2,isEqualNumber,2
+| ComparaisonType result: true         
+
+

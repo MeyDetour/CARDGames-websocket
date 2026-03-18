@@ -75,7 +75,7 @@ class RoomManager {
       },
       gameInDB["playerGlobalValue"],
 
-      gameInDB["assets"]["gains"]
+      gameInDB["assets"]["gains"],
     );
 
     // generate room Id
@@ -84,6 +84,32 @@ class RoomManager {
 
     //TODO : REMOVE its for test
 
+    let globalValues = {};
+    for (let key of Object.keys(gameInDB["globalValue"])) {
+      let type = gameInDB["globalValue"][key].type;
+      let value;
+      if (type == "number") {
+        value = 0;
+      } else if (type == "string") {
+        value = "";
+      } else if (type == "boolean") {
+        value = false;
+      } else if (type === "object") {
+        value = {};
+      } else if (type == "array" || type == "cardList") {
+        value = [];
+      } else {
+        value = null;
+      }
+
+      globalValues[key] = { ...gameInDB["globalValue"][key], value: value };
+    }
+    console.log(globalValues);
+    let gainObject = {};
+    for (let gain of gameInDB["assets"]["gains"]) {
+      gainObject[gain.id] = { value: 0 };
+    }
+
     let gameData = {
       roomInDb: gameInDB,
       roomId: roomID,
@@ -91,14 +117,44 @@ class RoomManager {
         players: [player],
         messages: [],
         logs: [],
+        state: { type: "string", value: "waitingPlayers" },
+        boardCard: {
+          type: "cardList",
+          value: [],
+        },
+        allPlayersHasPlayed: {
+          type: "boolean",
+          value: false,
+        },
+        winners: {
+          type: "playerList",
+          value: [],
+        },
         currentPlayerPosition: { value: 1 },
         tour: 0,
         manche: 0,
         ...gameInDB["globalValue"],
+
+        deck:{
+          type:"cardList",
+          value:Object.keys(gameInDB["assets"]["cards"])
+        },
+        discardDeck:{
+          type:"cardList",
+          value:[]
+        },
+        //  liste des gains possibles dans le jeu avec leur valeur actuelle pour cette partie (qui peut évoluer pendant la partie) , ex : gainObject = { gainId1 : {value: 2} , gainId2 : {value: 0} }
         gain: {
           type: "gainObject",
           value: {
-            1: 0,
+            gainObject,
+          },
+        },
+        // Pot commun de gain
+        groupPot: {
+          type: "gainObject",
+          value: {
+            gainObject,
           },
         },
         ...gameInDB["assets"],
@@ -120,6 +176,7 @@ class RoomManager {
   }
 
   sendGameChangeSignal(roomID) {
+    roomLogger.info("SEND GAME CHANGE SINGAL");
     let gameData = this.getRoom(roomID);
     if (gameData) {
       for (let currentPlayer of gameData.data.players) {

@@ -102,34 +102,35 @@ Les Démons sont des entités autonomes qui surveillent l'état du jeu. Lorsqu'u
 - Synchronisation : Enfin, un signal de mise à jour est envoyé à l'interface (Front-end) pour refléter les changements.
 
 ```mermaid
-graph TD
-    %% Entrée
-    WS[Signal WebSocket Reçu] --> GE{Game Engine}
+---
+config:
+  theme: base
+---
+flowchart TB
+ subgraph subGraph0["Noyau Central (Game Engine)"]
+        StepCheck{"Etape atteinte ? <br><i>Début, Tour, Manche</i>"}
+        GE{"Game Engine"}
+        DemonSpecific["Appel du Démon spécifique"]
+        DemonLoader["Chargeur de Démons"]
+        CheckCond@{ label: "Vérification des <br>conditions d'état" }
+        ExecuteDemon["Exécution des événements <br><i>Distribuer, Mélanger...</i>"]
+        PlayerLogic["Calcul des rôles et <br>actions autorisées"]
+  end
+    WS["Signal WebSocket Reçu"] --> GE
+    GE --> StepCheck
+    StepCheck -- OUI --> DemonSpecific
+    DemonSpecific --> DemonLoader
+    StepCheck -- NON --> DemonLoader
+    DemonLoader --> CheckCond
+    CheckCond -- Remplies --> ExecuteDemon
+    CheckCond -- Non Remplies --> PlayerLogic
+    ExecuteDemon --> PlayerLogic
+    PlayerLogic --> Broadcast@{ label: "Broadcast : Mise à jour de l'interface" }
+    Broadcast --> Front["Front-end UI"]
 
-    subgraph "Noyau Central (Game Engine)"
-        GE --> StepCheck{Etape atteinte ? <br/><i>Début, Tour, Manche</i>}
-        
-        %% Branche Étapes Spécifiques
-        StepCheck -- OUI --> DemonSpecific[Appel du Démon spécifique]
-        
-        %% Convergence vers le Chargeur
-        DemonSpecific --> DemonLoader
-        StepCheck -- NON --> DemonLoader[Chargeur de Démons]
-        
-        %% Logique des Démons d'état
-        DemonLoader --> CheckCond{Vérification des <br/>conditions d'état}
-        CheckCond -- Remplies --> ExecuteDemon[Exécution des événements <br/><i>Distribuer, Mélanger...</i>]
-        CheckCond -- Non Remplies --> PlayerLogic
-        
-        ExecuteDemon --> PlayerLogic[Calcul des rôles et <br/>actions autorisées]
-    end
-
-    %% Sortie
-    PlayerLogic --> Broadcast[Broadcast : Mise à jour de l'interface]
-    Broadcast --> Front[Front-end UI]
-
-    %% Styles
-    style GE fill:#ff5804,stroke:#333,stroke-width:2px 
-    style StepCheck fill:#322635,stroke:#333
-    style CheckCond fill:#322635,stroke:#333 
+    CheckCond@{ shape: diamond}
+    Broadcast@{ shape: rect}
+    style StepCheck fill:#C8E6C9,stroke:#333
+    style GE fill:#FFE0B2,stroke:#FFE0B2,stroke-width:2px 
+    style CheckCond fill:#C8E6C9,stroke:#333
 ```

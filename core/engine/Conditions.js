@@ -50,7 +50,7 @@ export default class Conditions {
       if (!demon.name || !demon.condition){
           continue;
       }
-      conditionLogger.debug("====DEMON [" + demon.id + "]: " + demon.name);
+     // conditionLogger.debug("====DEMON [" + demon.id + "]: " + demon.name);
       let result = null;
       if (demon.boucle) {
         let elts = Parser.translateInnerExpression(

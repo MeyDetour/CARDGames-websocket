@@ -89,9 +89,7 @@ export default class Parser {
           "FunctionFileLogger.create called with undefined condition :" + str,
         );
       }
-      parserLogger.debug(
-        `expression étudiée  ${str} :  ${cFileLogger.filepath}`,
-      );
+   //   parserLogger.debug(   `expression étudiée  ${str} :  ${cFileLogger.filepath}`,);
 
       cFileLogger.log("Parse call in :");
       cFileLogger.log(
