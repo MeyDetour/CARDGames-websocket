@@ -130,6 +130,7 @@ class RoomManager {
           type: "playerList",
           value: [],
         },
+        globalValueStatic : gameInDB.globalValueStatic || {},
         currentPlayerPosition: { value: 1 },
         tour: 0,
         manche: 0,
@@ -137,7 +138,7 @@ class RoomManager {
 
         deck:{
           type:"cardList",
-          value:Object.keys(gameInDB["assets"]["cards"])
+          value:Object.keys(gameInDB.assets.cards).map(key=>parseInt(key))
         },
         discardDeck:{
           type:"cardList",

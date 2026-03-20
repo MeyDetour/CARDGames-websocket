@@ -16,6 +16,7 @@ export default class Parser {
     if (TypeManager.isBool(exp)) {
       return "bool";
     }
+    // on le met avant la comparaison avec le string pour pas qu'il soit ignoré
     if (TypeManager.getType(exp) === "number" ) {
       return "int";
     }
@@ -30,7 +31,7 @@ export default class Parser {
       return "comparaison";
     } else if (exp.startsWith("{")) {
       return "variable";
-    } else if (exp.startsWith("getPlayer(")) {
+    } else if (exp.startsWith("getPlayer(")||exp.startsWith("len(")) {
       return "function";
     } else if (exp.startsWith("<<")) {
       return "value";
@@ -76,6 +77,8 @@ export default class Parser {
       return null;
     }
     let type = Parser.getType(str, gameData);
+
+    // CREATE LOG FILE FOR THIS EXPRESSION
     if (
       params.initialisation !== "true" &&
       process.env.PARSER_FILE_LOG === "true" &&
@@ -89,7 +92,7 @@ export default class Parser {
           "FunctionFileLogger.create called with undefined condition :" + str,
         );
       }
-   //   parserLogger.debug(   `expression étudiée  ${str} :  ${cFileLogger.filepath}`,);
+     // parserLogger.debug(   `expression étudiée  ${str} :  ${cFileLogger.filepath}`,);
 
       cFileLogger.log("Parse call in :");
       cFileLogger.log(
@@ -113,6 +116,7 @@ export default class Parser {
       params.depth = 0;
     }
 
+    // VERIFY IF SYNTAX IS OK
     if (!this.verifyExpressionSyntax(str)) {
       const msg = `Syntax error in expression: "${str}" — check braces/parentheses balance`;
       parserLogger.error(msg);

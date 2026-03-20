@@ -13,7 +13,7 @@ let conditionLogger = Logger("condition");
  * les événements de la room. Permet d'exécuter automatiquement les
  * événements associés lorsque les conditions sont satisfaites.
  */
-export default class Conditions {
+export default class Evaluator {
   // start of tour are emit Event
   // end of tour is a caclated envent based on condition
 
@@ -47,25 +47,25 @@ export default class Conditions {
     conditionLogger.info("Load Demons...");
     let c = 0;
     for (let demon of gameData.roomInDb.events["demons"]) {
-      if (!demon.name || !demon.condition){
-          continue;
+      if (!demon.name || !demon.condition) {
+        continue;
       }
-     // conditionLogger.debug("====DEMON [" + demon.id + "]: " + demon.name);
+      // conditionLogger.debug("====DEMON [" + demon.id + "]: " + demon.name);
       let result = null;
       if (demon.boucle) {
         let elts = Parser.translateInnerExpression(
           demon.boucle,
           gameData,
-          params
+          params,
         );
 
         if (!Array.isArray(elts)) {
           new AppError(
             socket,
-            "Cannot obtain array with value " + demon.boucle
+            "Cannot obtain array with value " + demon.boucle,
           );
           conditionLogger.error(
-            "Cannot obtain array with value " + demon.boucle
+            "Cannot obtain array with value " + demon.boucle,
           );
           return null;
         }
@@ -80,7 +80,7 @@ export default class Conditions {
               params.originEvent &&
               !demon.condition.includes(params.originEvent)
             ) {
-              result = false
+              result = false;
               continue;
             }
             params = {
@@ -90,7 +90,7 @@ export default class Conditions {
             result = Parser.translateInnerExpression(
               demon.condition,
               gameData,
-              params
+              params,
             );
           }
         }
@@ -99,10 +99,10 @@ export default class Conditions {
           ...params,
           eventEmited: params?.originEvent,
         });
-        // un demon appelé par un originEvent (ChangerManche,changertour etc) 
+        // un demon appelé par un originEvent (ChangerManche,changertour etc)
         // declenche des evenements et demons, eviter de repeter deux fois le
         //  meme demon alors qu'il n'a pas fini d'executer ses evenements
-        // eviter de repeter deux fois l'evenement si on 
+        // eviter de repeter deux fois l'evenement si on
         if (
           params.originEvent &&
           !demon.condition.includes(params.originEvent)
@@ -120,7 +120,7 @@ export default class Conditions {
 
       if (result) {
         conditionLogger.info("le démon est réalisable : " + demon.condition);
-        LoggerClass.objectToString(demon)
+        LoggerClass.objectToString(demon);
 
         for (let id of demon.events) {
           Event.applyEventId(id, socket, gameData, {
@@ -152,14 +152,18 @@ export default class Conditions {
       player.actions.value = [];
 
       for (let a of actions) {
-        conditionLogger.debug("condition for event " + a.name);
-        let resultOFCondition = Parser.translateInnerExpression(
-          a.condition,
-          gameData,
-          {
-            currentPlayer: currentPlayerId,
-          }
-        );
+        let resultOFCondition = null;
+        if (a.condition) {
+          resultOFCondition = Parser.translateInnerExpression(
+            a.condition,
+            gameData,
+            {
+              currentPlayer: currentPlayerId,
+            },
+          );
+        }
+
+       
         if (
           (a.appearAtPlayerTurn ? p.id == currentPlayerId : true) &&
           (TypeManager.isDefined(resultOFCondition) ? resultOFCondition : true)
@@ -179,6 +183,7 @@ export default class Conditions {
    */
   static loadCurrentPlayerAction(gameData, socket, action, playerId) {
     conditionLogger.info("Load Current Player Action ...");
+    LoggerClass.objectToString(action);
     let currentPlayer = PlayerManager.getPlayerWithId(gameData, playerId);
     const params = {
       currentPlayer: playerId,
@@ -200,6 +205,24 @@ export default class Conditions {
       console.log("currentPlayer :>> ", typeof currentPlayer);
     }
   }
+
+    /**
+   * Charge les variable globale static
+   * @param {Object} gameData
+   * @param {Socket} socket 
+   */
+  static loadGlobalValueStatic(gameData, socket) {
+    conditionLogger.info("Load Global Value Static ...");
+    let globalValueStatic = gameData.roomInDb.globalValueStatic;
+    if(globalValueStatic){
+      for(let s of Object.keys(globalValueStatic)){
+        let value = Parser.translateInnerExpression(globalValueStatic[s].value, gameData);
+        gameData.data.globalValueStatic[s] = {value:value, display : globalValueStatic[s].display };
+        conditionLogger.info(`Load global static value ${s} with value : ${value}`);
+      }
+    }
+  }
+
   /**
    * Attribue les rôles définis dans `gameData.data.roles` aux joueurs
    * correspondants en mettant à jour l'objet player.
@@ -212,7 +235,7 @@ export default class Conditions {
 
     for (let r of roles) {
       let player = structuredClone(
-        Parser.translateInnerExpression(r.attribution, gameData)
+        Parser.translateInnerExpression(r.attribution, gameData),
       );
       if (PlayerManager.isPlayerType(player, gameData)) {
         if (player.roles.value.filter((pr) => pr.nom == r.nom).length === 0) {
@@ -221,7 +244,7 @@ export default class Conditions {
         }
       } else {
         conditionLogger.error(
-          "Il n'y pas de player trouvé pour " + r.attribution
+          "Il n'y pas de player trouvé pour " + r.attribution,
         );
       }
     }

@@ -562,6 +562,12 @@ export default class Action {
             this.fileLogger
           );
           for (let n = 0; n < sum; n++) {
+
+           // Sender donne des cartes une par une à Destinataire
+            if (!senderObject){
+                this.fileLogger.log("No sender,   ");
+              continue;
+            }
             if (senderObject.value.length === 0) {
               this.fileLogger.log("Sender value empty  ");
               continue;

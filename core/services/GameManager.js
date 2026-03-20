@@ -1,4 +1,4 @@
-import Conditions from "../engine/Conditions.js";
+import Evaluator from "../engine/Evaluator.js";
 import { Logger, LoggerClass } from "../logger/logger.js";
 import { Socket } from "socket.io";
 import { roomManager } from "./RoomManager.js";
@@ -18,7 +18,7 @@ export default class GameManager {
     gameData.data.state.value = "inProgress";
     gameLogger.info("EVENTS : Check onGameStart Events");
     io.to(gameData.roomId).emit("gameStarted", { gameData });
-    Conditions.loadDemon(gameData, socket, {
+    Evaluator.loadDemon(gameData, socket, {
       originEvent: "startOfGame",
     });
     // implication
@@ -30,7 +30,7 @@ export default class GameManager {
     engineLogger.info("Do Engine Action : startOFManche")
     gameData.data.logs.push("Début de la manche"); 
     gameLogger.info("EVENTS : Check eachStartOfManche Events");
-    Conditions.loadDemon(gameData, socket, {
+    Evaluator.loadDemon(gameData, socket, {
       originEvent: "eachStartOfManche",
     });
     // implication
@@ -43,7 +43,7 @@ export default class GameManager {
     gameData.data.logs.push("fin de la manche"); 
     gameLogger.info("EVENTS : Check eachEndOfManche Events");
 
-    Conditions.loadDemon(gameData, socket, {
+    Evaluator.loadDemon(gameData, socket, {
       originEvent: "eachEndOfManche",
     });
     // implication
@@ -61,7 +61,7 @@ export default class GameManager {
     }
 
     gameData.data.currentPlayerPosition.value = 1;
-    Conditions.loadDemon(gameData, socket, {
+    Evaluator.loadDemon(gameData, socket, {
       originEvent: "onChangeTour",
     });
     return {};
@@ -76,7 +76,7 @@ export default class GameManager {
       gameData.data.tour = 0
     
     gameData.data.currentPlayerPosition.value = 1;
-    Conditions.loadDemon(gameData, socket, {
+    Evaluator.loadDemon(gameData, socket, {
       originEvent: "startOfManche",
     });
     return {event:"startOfManche"};
@@ -132,7 +132,7 @@ export default class GameManager {
             params.action
           )
         ) {
-          Conditions.loadCurrentPlayerAction(
+          Evaluator.loadCurrentPlayerAction(
             gameData,
             socket,
             ActionManager.getActionFromName(gameData, params.action),
@@ -158,20 +158,18 @@ export default class GameManager {
     }
 
     //check actions for player
+ 
+    Evaluator.loadDemon(gameData, socket, params);
+    Evaluator.loadRoles(gameData, socket, params);
+    Evaluator.changeLoadActionsForPlayers(gameData, socket);
 
-    // load globals demons
-    Conditions.loadDemon(gameData, socket, params);
-    Conditions.loadRoles(gameData, socket, params);
-    Conditions.changeLoadActionsForPlayers(gameData, socket);
-    // condition de fin de manche
-    // condition de début de manche
+
+    // appel en dernier afin d'avoir les données les plus à jour possible
+    Evaluator.loadGlobalValueStatic(gameData, socket); 
+
 
     roomManager.sendGameChangeSignal(gameData.roomId);
-
-    // gestion des manches
-    // gestion des events à la fin d'une manchge
-    // incrementation d'une manche
-    // incrementation d'un tour
+ 
   }
 }
 

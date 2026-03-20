@@ -597,7 +597,6 @@ export default class Event {
     if (!shortWithValueEvent) {
       new AppError(socket, "shortWithValueEvent must be provided");
       eventLogger.warn("shortWithValueEvent must be provided");
-
       return null;
     }
     eventLogger.info("Apply WithValue Event ID: " + shortWithValueEvent.id);
