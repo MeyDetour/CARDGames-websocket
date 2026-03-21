@@ -58,14 +58,14 @@ export const Logger = (namespace = "", { level = "debug" } = {}) => {
               level === "debug"
                 ? "cyan"
                 : level === "info"
-                ? "green"
-                : level === "warn"
-                ? "yellow"
-                : level === "error"
-                ? "red"
-                : "magenta"
+                  ? "green"
+                  : level === "warn"
+                    ? "yellow"
+                    : level === "error"
+                      ? "red"
+                      : "magenta"
             ]
-          }${formatText(level, "")}${ANSI.reset}`
+          }${formatText(level, "")}${ANSI.reset}`,
         );
         console.dir(msg, { depth: null, colors: true });
         return;
@@ -80,12 +80,12 @@ export const Logger = (namespace = "", { level = "debug" } = {}) => {
         level === "debug"
           ? ANSI.cyan
           : level === "info"
-          ? ANSI.green
-          : level === "warn"
-          ? ANSI.yellow
-          : level === "error"
-          ? ANSI.red
-          : ANSI.magenta;
+            ? ANSI.green
+            : level === "warn"
+              ? ANSI.yellow
+              : level === "error"
+                ? ANSI.red
+                : ANSI.magenta;
       console.log(`${colorCode}${formatText(level, msg)}${ANSI.reset}`);
     } else {
       // fallback
@@ -154,16 +154,58 @@ export class LoggerClass {
 
   static getCallerLocation() {
     const caller = new Error().stack.split("\n");
-    caller.splice(0,1)
-    caller.splice(0,1)
-    return caller
+    caller.splice(0, 1);
+    caller.splice(0, 1);
+    return caller;
   }
 
   static getKeyOfObject(object, name = "") {
     let keys = Object.keys(object);
-   return `Keys of object ${name ? "for " + name : ""}  :>> ` + keys
+    return `Keys of object ${name ? "for " + name : ""}  :>> ` + keys;
   }
 
+  static logGridOldNew(oldObj, newObj, fileLogger) {
+    if (!fileLogger) {
+      const msg = "fileLogger is null in logGridOldNew";
+      console.error(msg);
+      LoggerClass.logFileLocalisation();
+      try {
+        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      } catch (e) {}
+      return;
+    }
+    // FILE
+    fileLogger.section("------ GRID DIFF OLD / NEW ----");
+    fileLogger.log(this.gridOldNewToText(oldObj, newObj));
+  }
+
+  static gridOldNewToText(obj1, obj2) {
+    const oldLines = LoggerClass.pretty(obj1).split("\n");
+    const newLines = LoggerClass.pretty(obj2).split("\n");
+    const max = Math.max(oldLines.length, newLines.length);
+
+    const oldWidth = Math.max(...oldLines.map((l) => l.length), 3);
+    const newWidth = Math.max(...newLines.map((l) => l.length), 3);
+
+    const pad = (str, len) => str.padEnd(len, " ");
+
+    const lines = [];
+
+    lines.push(`${pad("OLD", oldWidth)} | ${pad("NEW", newWidth)}`);
+    lines.push(`${"-".repeat(oldWidth)}-+-${"-".repeat(newWidth)}`);
+
+    for (let i = 0; i < max; i++) {
+      lines.push(
+        `${pad(oldLines[i] ?? "", oldWidth)} | ${pad(
+          newLines[i] ?? "",
+          newWidth
+        )}`
+      );
+    }
+    lines.push(`${"-".repeat(oldWidth)}-+-${"-".repeat(newWidth)}`);
+
+    return lines.join("\n");
+  }
   static logConsoleGridOldNew(obj1, ob2) {
     //    const caller = new Error().stack.split("\n")[2].trim(); console.log(`[${caller}]`);
 
@@ -185,5 +227,62 @@ export class LoggerClass {
       columns: ["", "old", "new"],
       rows,
     });
+  }
+
+  //  --- ------ 🔄 GIVEELEMENTTO PARAMS ---- ---
+  //-------+--------------------+--------------+--------------------------+---------------+--------+-----------+--------+--------+-------
+  //Sender | Sender List Object | Destinataire | Destinataire List Object | Give Elements | Socket | Game Data | Params | Logs   | Index
+  //-------+--------------------+--------------+--------------------------+---------------+--------+-----------+--------+--------+-------
+  //object | object             | object       | object                   | object        | object | object    | object | object | object
+  //-------+--------------------+--------------+--------------------------+---------------+--------+-----------+--------+--------+-------
+
+  static logGridFromObject(data, title, fileLogger) {
+    if (!fileLogger) return;
+
+    if (title) fileLogger.section(`------ ${title} ----`);
+    fileLogger.log(this.gridKeyValueToText(data));
+  }
+
+  //-------+--------------------+--------------+--------------------------+---------------+--------+-----------+--------+--------+-------
+  //Sender | Sender List Object | Destinataire | Destinataire List Object | Give Elements | Socket | Game Data | Params | Logs   | Index
+  //-------+--------------------+--------------+--------------------------+---------------+--------+-----------+--------+--------+-------
+  //object | object             | object       | object                   | object        | object | object    | object | object | object
+  //-------+--------------------+--------------+--------------------------+---------------+--------+-----------+--------+--------+-------
+
+  static gridKeyValueToText(obj) {
+    const keys = Object.keys(obj);
+
+    // transformer chaque valeur en tableau de lignes
+    const valuesLines = keys.map((k) => {
+      const v = obj[k];
+      if (v === null || v === undefined) return [""]; // cellule vide
+      if (typeof v === "object") return LoggerClass.pretty(v).split("\n");
+      return [String(v)];
+    });
+
+    // largeur max de chaque colonne (header + toutes les lignes)
+    const widths = keys.map((k, i) => {
+      const maxValueWidth = Math.max(...valuesLines[i].map((l) => l.length));
+      return Math.max(k.length, maxValueWidth, 3);
+    });
+
+    const pad = (s, w) => s.padEnd(w, " ");
+
+    // header
+    const header = keys.map((k, i) => pad(k, widths[i])).join(" | ");
+    const sep = widths.map((w) => "-".repeat(w)).join("-+-");
+
+    // nombre de lignes max
+    const maxLines = Math.max(...valuesLines.map((v) => v.length));
+
+    const lines = [];
+    for (let i = 0; i < maxLines; i++) {
+      const row = valuesLines.map((vLines, j) =>
+        pad(vLines[i] ?? "", widths[j]),
+      );
+      lines.push(row.join(" | "));
+    }
+
+    return [sep, header, sep, ...lines, sep].join("\n");
   }
 }

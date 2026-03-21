@@ -24,6 +24,7 @@ export default class RoomSocket {
         let gameId = room ? room.roomInDb.id : null
       socket.emit("isExistingRoomResult",{roomId : roomIDUppercase, result , gameId ,pathOnEchec } );
     });
+    
     socket.on("newMessageOnmessagerie", (message) => {
       console.log("new message " + message);
      MessagerieManager.sendMessage(socket, message); 

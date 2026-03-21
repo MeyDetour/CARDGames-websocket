@@ -86,33 +86,33 @@ export default class Parser {
       type !== "int" &&
       type !== "bool"
     ) {
-      const cFileLogger = FunctionFileLogger.create(str);
-      if (!cFileLogger) {
+      const cLoggerClass = FunctionFileLogger.create(str);
+      if (!cLoggerClass) {
         parserLogger.error(
           "FunctionFileLogger.create called with undefined condition :" + str,
         );
       }
-     // parserLogger.debug(   `expression étudiée  ${str} :  ${cFileLogger.filepath}`,);
+     // parserLogger.debug(   `expression étudiée  ${str} :  ${cLoggerClass.filepath}`,);
 
-      cFileLogger.log("Parse call in :");
-      cFileLogger.log(
+      cLoggerClass.log("Parse call in :");
+      cLoggerClass.log(
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
       if (params.location && typeof params.location.log === "function") {
         params.location.log(
-          `expression étudiée écuté in  ${cFileLogger.filepath}`,
+          `expression étudiée écuté in  ${cLoggerClass.filepath}`,
         );
       }
 
-      cFileLogger.log("gameData :>> " + typeof gameData);
-      cFileLogger.log(
+      cLoggerClass.log("gameData :>> " + typeof gameData);
+      cLoggerClass.log(
         "params :>> " +
           typeof params +
           " " +
           LoggerClass.getKeyOfObject(params),
       );
       params.initialisation = "true";
-      params.fileLogger = cFileLogger;
+      params.fileLogger = cLoggerClass;
       params.depth = 0;
     }
 

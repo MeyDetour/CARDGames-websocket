@@ -11,7 +11,7 @@ export default class FunctionFileLogger {
   static create(condition) {
     if (!TypeManager.isDefined(condition)) {
       functionFileLoggerLogger.error(
-        "ActionFileLogger.create called with undefined condition"
+        "ActionLoggerClass.create called with undefined condition"
       );
       return null;
     }

@@ -5,9 +5,7 @@ import Parser from "../../parser/parser.js";
 import CardManager from "../services/CardManager.js";
 import { TypeManager } from "../services/helper/TypeManager.js";
 import { ArrayManager } from "../services/helper/ArrayManager.js";
-import VariableType from "../../parser/VariableType.js";
-import EventFileLogger from "../logger/EventFileLogger.js";
-import FileLogger from "../logger/FileLogger.js";
+import VariableType from "../../parser/VariableType.js"; 
 export default class Action {
   /**
    * Execute logical separation for access variable  ex currentPlayer#gain#1
@@ -152,7 +150,7 @@ export default class Action {
     );
     let before = structuredClone(this.destinataire);
     ArrayManager.shuffle(this.destinataire.value);
-    FileLogger.logGridOldNew(before, this.destinataire, this.fileLogger);
+    LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
 
     this.actionLogger.info("Effectué");
     this.fileLogger.log("✅ Mélange effectué.");
@@ -184,13 +182,13 @@ export default class Action {
     this.fileLogger.log(
       `✅ Le joueur de départ a été changé de ${before.name} à ${this.gameData.data.players[0].name}.`
     );
-    FileLogger.logGridOldNew(
+    LoggerClass.logGridOldNew(
       before,
       this.gameData.data.players[0],
       this.fileLogger
     );
     this.fileLogger.log("Players :");
-    FileLogger.logGridOldNew(
+    LoggerClass.logGridOldNew(
       beforePPlayers,
       this.gameData.data.players,
       this.fileLogger
@@ -217,7 +215,7 @@ export default class Action {
     let before = structuredClone(this.destinataire);
     this.destinataire["attachedEventForTour"]["value"].push("skipPlayerTour");
     PlayerManager.updatePlayerObject(this.destinataire, this.gameData);
-    FileLogger.logGridOldNew(before, this.destinataire, this.fileLogger);
+    LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
 
     this.actionLogger.info("Effectué");
     this.fileLogger.log("✅ Saut du tour effectué.");
@@ -270,7 +268,7 @@ export default class Action {
       this.destinataireListObject
     );
 
-    FileLogger.logGridOldNew(before, this.gameData.data, this.fileLogger);
+    LoggerClass.logGridOldNew(before, this.gameData.data, this.fileLogger);
     if (this.logs.globalEventLog) this.actionLogger.info("Effectué");
     this.fileLogger.log("✅ changement de valeur effectué.");
   }
@@ -287,7 +285,7 @@ export default class Action {
       this.fileLogger.log(
         `✅ Tous les événements attachés pour le tour ont été supprimés du joueur dans l'événement ID=${this.event["id"]}.`
       );
-      FileLogger.logGridOldNew(before, this.destinataire, this.fileLogger);
+      LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
 
       this.fileLogger.log("Effectué");
     }
@@ -295,7 +293,7 @@ export default class Action {
   }
 
   giveElementsTo() {
-    FileLogger.logGridFromObject(
+    LoggerClass.logGridFromObject(
       {
         Sender: typeof this.sender,
         "Sender List Object": typeof this.senderListObject,
@@ -314,7 +312,7 @@ export default class Action {
 
     let beforeGameData = structuredClone(this.gameData.data);
 
-    FileLogger.logGridFromObject(
+    LoggerClass.logGridFromObject(
       {
         Destinataire: this.destinataire,
         Sender: this.sender,
@@ -363,7 +361,7 @@ export default class Action {
         }
       }
 
-      FileLogger.logGridFromObject(
+      LoggerClass.logGridFromObject(
         {
           "Destinataire object": destinataireObject,
           "Sender Object": senderObject,
@@ -426,7 +424,7 @@ export default class Action {
           }
           if (key === "{cards}") {
             let newSenderObjectValue = structuredClone(senderObject.value);
-            FileLogger.logGridFromObject(
+            LoggerClass.logGridFromObject(
               {
                 "New Sender Object Value before": newSenderObjectValue,
                 "senderObject value ": senderObject.value,
@@ -551,7 +549,7 @@ export default class Action {
         }
         if (key === "{cards}") {
           let newSenderObjectValue = structuredClone(senderObject.value);
-          FileLogger.logGridFromObject(
+          LoggerClass.logGridFromObject(
             {
               
                 "New Sender Object Value before": newSenderObjectValue,
@@ -600,7 +598,7 @@ export default class Action {
         this.destinataireListObject
       );
 
-      FileLogger.logGridFromObject(
+      LoggerClass.logGridFromObject(
         {
           "Destinataire Liste": this.destinataireListObject,
           "Destinataire Object": destinataireObject,
@@ -610,7 +608,7 @@ export default class Action {
         this.fileLogger
       );
 
-      FileLogger.logGridFromObject(
+      LoggerClass.logGridFromObject(
         {
           "Sender Liste": this.SenderListObject,
           "Sender Object": senderObject,
@@ -634,7 +632,7 @@ export default class Action {
         }
       }
 
-      FileLogger.logGridOldNew(
+      LoggerClass.logGridOldNew(
         beforeGameData,
         this.gameData.data,
         this.fileLogger

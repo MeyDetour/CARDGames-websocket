@@ -32,10 +32,13 @@ export class MessagerieManager {
     socket.emit("messageAddedInMessagerie",{messages, message});
   }
   static addMessage(gameData, socket, message) {
+    let nMessage =message
+   nMessage.content =  nMessage.content.replaceAll("richard","***")
+  nMessage.content =  nMessage.content.replaceAll("Richard","***")
     
-      gameData.data.messages.push(message);
+      gameData.data.messages.push(nMessage);
   
     let messages =gameData.data.messages
-    socket.to(gameData.roomId).emit("newMessageReceived",{messages, message});
+    socket.to(gameData.roomId).emit("newMessageReceived",{messages, message:nMessage});
   }
 }

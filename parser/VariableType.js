@@ -3,9 +3,7 @@ import { errorStack } from "../core/error/ErrorStack.js";
 import PlayerManager from "../core/services/PlayerManager.js";
 import { TypeManager } from "../core/services/helper/TypeManager.js";
 import TypeInterface from "./TypeInterface.js";
-import Parser from "./parser.js";
-import FileLogger from "../core/logger/FileLogger.js";
-
+import Parser from "./parser.js"; 
 const variableLogger = Logger("variableType");
 export default class VariableType extends TypeInterface {
   static removeTag(exp) {

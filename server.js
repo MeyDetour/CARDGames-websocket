@@ -19,6 +19,7 @@ fs.rmSync(LOG_DIR, { recursive: true, force: true });
 fs.mkdirSync(LOG_DIR, { recursive: true });
 fs.mkdirSync(LOG_DIR+"/functions", { recursive: true });
 fs.mkdirSync(LOG_DIR+"/events", { recursive: true });
+fs.mkdirSync(LOG_DIR+"/other", { recursive: true });
 
 
 

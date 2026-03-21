@@ -160,6 +160,7 @@ export default class GameManager {
     //check actions for player
  
     Evaluator.loadDemon(gameData, socket, params);
+    Evaluator.loadWin(gameData, socket);
     Evaluator.loadRoles(gameData, socket, params);
     Evaluator.changeLoadActionsForPlayers(gameData, socket);
 

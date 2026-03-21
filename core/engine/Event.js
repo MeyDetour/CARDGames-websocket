@@ -9,8 +9,7 @@ import { TypeManager } from "../services/helper/TypeManager.js";
 import Action from "./action.js";
 import { errorStack } from "../error/ErrorStack.js";
 import GameManager from "../services/GameManager.js";
-import EventFileLogger from "../logger/EventFileLogger.js";
-import FileLogger from "../logger/FileLogger.js";
+import EventFileLogger from "../logger/EventFileLogger.js"; 
 const eventLogger = Logger("Event");
 
 /**
@@ -213,7 +212,7 @@ export default class Event {
           }
 
           if (boucleLog) {
-            FileLogger.logGridFromObject(
+            LoggerClass.logGridFromObject(
               {
                 Sender: sender,
                 "Sender List": senderListObject,
@@ -280,7 +279,7 @@ export default class Event {
       actionObject.setSenderListObject(senderListObject);
       actionObject.setSender(sender);
 
-      FileLogger.logGridFromObject(
+      LoggerClass.logGridFromObject(
         {
           Sender: sender,
           "Sender List": senderListObject,
@@ -331,7 +330,7 @@ export default class Event {
             });
           }
 
-          FileLogger.logGridOldNew(before, gameData.data.tour, fileLogger);
+          LoggerClass.logGridOldNew(before, gameData.data.tour, fileLogger);
         }
         if (action === "changeManche") {
           let before = gameData.data.manche;
@@ -350,7 +349,7 @@ export default class Event {
             });
           }
 
-          FileLogger.logGridOldNew(before, gameData.data.manche, fileLogger);
+          LoggerClass.logGridOldNew(before, gameData.data.manche, fileLogger);
         }
 
         if (action === "changeStartingPlayer") {

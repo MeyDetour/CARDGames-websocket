@@ -1,10 +1,10 @@
-import FileLogger from '../../core/logger/FileLogger';
-describe('FileLogger', () => {
+import LoggerClass from '../../core/logger/LoggerClass';
+describe('LoggerClass', () => {
   it('should log to file', () => {
     // Ajoutez vos assertions ici
-    expect(FileLogger.gridOldNewToText).toBeDefined();
-    expect(FileLogger.logGridOldNew).toBeDefined();
-    expect(FileLogger.gridKeyValueToText).toBeDefined();
-    expect(FileLogger.logGridFromObject).toBeDefined();
+    expect(LoggerClass.gridOldNewToText).toBeDefined();
+    expect(LoggerClass.logGridOldNew).toBeDefined();
+    expect(LoggerClass.gridKeyValueToText).toBeDefined();
+    expect(LoggerClass.logGridFromObject).toBeDefined();
   });
 });
