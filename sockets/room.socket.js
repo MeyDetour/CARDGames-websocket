@@ -26,8 +26,7 @@ export default class RoomSocket {
     });
     
     socket.on("newMessageOnmessagerie", (message) => {
-      console.log("new message " + message);
-     MessagerieManager.sendMessage(socket, message); 
+    MessagerieManager.sendMessage(socket, message); 
     });
   }
 }

@@ -9,7 +9,7 @@ export default class PlayerManager {
       const msg = `Game Data is undefined in PlayerManager.getPlayer(playerPosition=${playerPosition})`;
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
     }
     if (playerPosition > gameData.data.players.length) {
       playerPosition = (playerPosition % gameData.data.players.length) - 1;
@@ -18,14 +18,13 @@ export default class PlayerManager {
     }
     return gameData.data.players[playerPosition];
   }
-  static getNextPlayer(gameData, currentPlayerPosition) {
-    console.log("currentPlayerPosition :>> ", currentPlayerPosition);
+  static getNextPlayer(gameData, currentPlayerPosition) { 
     if (!gameData) {
       const msg = `Game Data is undefined in PlayerManager.getNextPlayer(currentPlayerPosition=${currentPlayerPosition})`;
       playerManagerLogger.error(msg);
 
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       return null;
     }
     let playerIsPrevious = false;
@@ -45,7 +44,7 @@ export default class PlayerManager {
       const msg = `Game Data is undefined in PlayerManager.isLastUser(playerPosition=${playerPosition})`;
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       return null;
     }
     if (
@@ -62,7 +61,7 @@ export default class PlayerManager {
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       return null;
     }
@@ -145,7 +144,7 @@ export default class PlayerManager {
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
     }
   }

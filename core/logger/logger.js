@@ -170,7 +170,7 @@ export class LoggerClass {
       console.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       return;
     }
@@ -198,8 +198,8 @@ export class LoggerClass {
       lines.push(
         `${pad(oldLines[i] ?? "", oldWidth)} | ${pad(
           newLines[i] ?? "",
-          newWidth
-        )}`
+          newWidth,
+        )}`,
       );
     }
     lines.push(`${"-".repeat(oldWidth)}-+-${"-".repeat(newWidth)}`);

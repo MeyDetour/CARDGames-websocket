@@ -12,8 +12,7 @@ class RoomManager {
     this.rooms = new Map();
   }
 
-  isExistingId(id) {
-    console.log(this.rooms.keys());
+  isExistingId(id) { 
     return this.rooms.has(id);
   }
 
@@ -41,7 +40,7 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       return;
     }
@@ -50,7 +49,7 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       return;
     }
@@ -60,7 +59,7 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       return;
     }
@@ -103,8 +102,7 @@ class RoomManager {
       }
 
       globalValues[key] = { ...gameInDB["globalValue"][key], value: value };
-    }
-    console.log(globalValues);
+    } 
     let gainObject = {};
     for (let gain of gameInDB["assets"]["gains"]) {
       gainObject[gain.id] = { value: 0 };
@@ -197,7 +195,7 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       return;
     }
@@ -207,7 +205,7 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       return;
     }
@@ -217,7 +215,7 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       return;
     }
@@ -253,7 +251,7 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
       new AppError(socket, "Id incorrect");
     }

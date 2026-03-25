@@ -5,7 +5,7 @@ Condition  : comp({currentPlayer#currentBet};isEqualNumber;{currentBet})
 Timestamp   : 2026-03-18T09:31:26.150Z
 Parse call in :
 [ 
-  "    at Conditions.changeLoadActionsForPlayers (file:///home/mey/WebstormProjects/CARDGames-websocket/core/engine/Conditions.js:156:40)",
+  "    at Conditions.loadActionsForPlayers (file:///home/mey/WebstormProjects/CARDGames-websocket/core/engine/Conditions.js:156:40)",
   "    at Parser.translateInnerExpression (file:///home/mey/WebstormProjects/CARDGames-websocket/parser/parser.js:98:40)"
 ]
 

@@ -17,7 +17,7 @@ export default class Parser {
       return "bool";
     }
     // on le met avant la comparaison avec le string pour pas qu'il soit ignoré
-    if (TypeManager.getType(exp) === "number" ) {
+    if (TypeManager.getType(exp) === "number") {
       return "int";
     }
     if (typeof exp !== "string") {
@@ -31,7 +31,7 @@ export default class Parser {
       return "comparaison";
     } else if (exp.startsWith("{")) {
       return "variable";
-    } else if (exp.startsWith("getPlayer(")||exp.startsWith("len(")) {
+    } else if (exp.startsWith("getPlayer(") || exp.startsWith("len(")) {
       return "function";
     } else if (exp.startsWith("<<")) {
       return "value";
@@ -66,7 +66,10 @@ export default class Parser {
       parserLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       return str;
     }
@@ -77,7 +80,6 @@ export default class Parser {
       return null;
     }
     let type = Parser.getType(str, gameData);
-
     // CREATE LOG FILE FOR THIS EXPRESSION
     if (
       params.initialisation !== "true" &&
@@ -92,8 +94,16 @@ export default class Parser {
           "FunctionFileLogger.create called with undefined condition :" + str,
         );
       }
-     // parserLogger.debug(   `expression étudiée  ${str} :  ${cLoggerClass.filepath}`,);
 
+      // Render link this FileLogger in another FileLogger
+      if (params.precedentFileLogger) {
+        params.precedentFileLogger.log(
+          `Parsage de ${str} dans ${cLoggerClass.filepath}`,
+        );
+        params.precedentFileLogger = null;
+      }
+
+      // parserLogger.debug(   `expression étudiée  ${str} :  ${cLoggerClass.filepath}`,);
       cLoggerClass.log("Parse call in :");
       cLoggerClass.log(
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
@@ -122,7 +132,10 @@ export default class Parser {
       parserLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
 
       params.initialisation = "false";
@@ -250,7 +263,10 @@ export default class Parser {
       const msg = "str is undefined in parser ";
       eventLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
 
       return null;
     }
@@ -271,7 +287,6 @@ export default class Parser {
     if (depth !== 0) {
       return false;
     }
-    
 
     return true;
   }

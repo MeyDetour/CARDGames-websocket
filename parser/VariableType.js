@@ -149,7 +149,7 @@ export default class VariableType extends TypeInterface {
             variableLogger.error(msg);
             LoggerClass.logFileLocalisation();
             try {
-              errorStack.addError(msg, LoggerClass.getFileLocalisation());
+              errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
             } catch (e) {}
             return null;
           }
@@ -160,7 +160,7 @@ export default class VariableType extends TypeInterface {
             variableLogger.error(msg);
             LoggerClass.logFileLocalisation();
             try {
-              errorStack.addError(msg, LoggerClass.getFileLocalisation());
+              errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
             } catch (e) {}
             return null;
           }
@@ -171,7 +171,7 @@ export default class VariableType extends TypeInterface {
             variableLogger.error(msg);
             LoggerClass.logFileLocalisation();
             try {
-              errorStack.addError(msg, LoggerClass.getFileLocalisation());
+              errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
             } catch (e) {}
             return null;
           }
@@ -185,7 +185,7 @@ export default class VariableType extends TypeInterface {
             variableLogger.error(msg);
             LoggerClass.logFileLocalisation();
             try {
-              errorStack.addError(msg, LoggerClass.getFileLocalisation());
+              errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
             } catch (e) {}
           }
         } else {
@@ -236,7 +236,7 @@ export default class VariableType extends TypeInterface {
               try {
                 errorStack.addError(
                   msg + ` (elt=${elt})`,
-                  LoggerClass.getFileLocalisation()
+                     LoggerClass.pretty(LoggerClass.getCallerLocation().reverse())
                 );
               } catch (e) {}
 

@@ -55,7 +55,7 @@ export default class Action {
       console.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg, LoggerClass.getFileLocalisation());
+        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       } catch (e) {}
     }
   }
@@ -128,7 +128,7 @@ export default class Action {
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
       this.fileLogger.error(new Error(msg), "actions.js → shuffle()");
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
     }
 
     if (!Array.isArray(this.destinataire.value)) {
@@ -140,7 +140,7 @@ export default class Action {
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
       this.fileLogger.error(new Error(msg), "actions.js → shuffle()");
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       return;
     }
 
@@ -170,7 +170,7 @@ export default class Action {
         new Error(msg),
         "actions.js → changeStartingPlayer()"
       );
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
     }
     this.fileLogger.log(
       `🔄 Changement du joueur de départ dans l'événement ID=${this.event["id"]}`
@@ -207,7 +207,7 @@ export default class Action {
       LoggerClass.logFileLocalisation();
       this.fileLogger.error(new Error(msg), "actions.js → skipPlayerTour()");
 
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
     }
     this.fileLogger.log(
       `⏭️ Saut du tour du joueur dans l'événement ID=${this.event["id"]}`
@@ -398,7 +398,7 @@ export default class Action {
               "actions.js → giveElementsTo()"
             );
 
-            errorStack.addError(msg, LoggerClass.getFileLocalisation());
+            errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
             return;
           }
 
@@ -419,7 +419,7 @@ export default class Action {
               "actions.js → giveElementsTo()"
             );
 
-            errorStack.addError(msg, LoggerClass.getFileLocalisation());
+            errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
             return;
           }
           if (key === "{cards}") {
@@ -507,7 +507,7 @@ export default class Action {
             "actions.js → giveElementsTo()"
           );
 
-          errorStack.addError(msg, LoggerClass.getFileLocalisation());
+          errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
 
           return;
         }

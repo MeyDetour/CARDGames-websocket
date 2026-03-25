@@ -30,7 +30,7 @@ export class TypeManager {
     const msg = "Cannot get type of " + elt;
     typeManager.error(msg);
     LoggerClass.logFileLocalisation();
-    try { errorStack.addError(msg, LoggerClass.getFileLocalisation()); } catch(e) {}
+    try { errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse())); } catch(e) {}
     return null;
   }
   static getFormatedType(elt) {

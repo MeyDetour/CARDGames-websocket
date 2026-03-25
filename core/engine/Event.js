@@ -63,7 +63,7 @@ export default class Event {
       LoggerClass.logFileLocalisation();
       errorStack.addError(
         "Game Data is undefined in Event.ExecuteEvent",
-        LoggerClass.getFileLocalisation(),
+           LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
 
       return null;
@@ -73,7 +73,7 @@ export default class Event {
       LoggerClass.logFileLocalisation();
       errorStack.addError(
         "Event is undefined in Event.ExecuteEvent",
-        LoggerClass.getFileLocalisation(),
+           LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
 
       return null;
@@ -119,8 +119,7 @@ export default class Event {
     LoggerClass.objectToString(event);
 
     let action = this.getAction(event, gameData);
-    let value = this.getValue(event);
-    console.log("value of event :" + value);
+    let value = this.getValue(event); 
     let giveElements = this.getGiveElements(event, gameData);
 
     const actionObject = new Action(
@@ -428,7 +427,7 @@ export default class Event {
             const msg = `Event ${event.id} Want to check 'playerBoucle' but does not provide any index number in iteration`;
             eventLogger.error(msg);
             LoggerClass.logFileLocalisation();
-            errorStack.addError(msg, LoggerClass.getFileLocalisation());
+            errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
           }
         }
         return [
@@ -485,7 +484,7 @@ export default class Event {
             const msg = `Event ${event.id} Want to check 'playerBoucle' but does not provide any index number in iteration`;
             eventLogger.error(msg);
             LoggerClass.logFileLocalisation();
-            errorStack.addError(msg, LoggerClass.getFileLocalisation());
+            errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
           }
         }
         return [
@@ -644,7 +643,7 @@ export default class Event {
         "you data object must have with value array " + withValueEvent.id;
       eventLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
 
       return null;
     }
@@ -656,7 +655,7 @@ export default class Event {
       const msg = "Event not found! ID=" + withValueEvent.id;
       actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg, LoggerClass.getFileLocalisation());
+      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
       return null;
     }
 

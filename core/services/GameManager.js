@@ -96,7 +96,7 @@ export default class GameManager {
   }
 
   static engine(gameData, socket, params = {}) {
-    console.log(LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+    //console.log(LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
     if (!params) {
       params = {};
     }
@@ -132,7 +132,7 @@ export default class GameManager {
             params.action
           )
         ) {
-          Evaluator.loadCurrentPlayerAction(
+          ActionManager.applyCurrentPlayerAction(
             gameData,
             socket,
             ActionManager.getActionFromName(gameData, params.action),
@@ -162,7 +162,7 @@ export default class GameManager {
     Evaluator.loadDemon(gameData, socket, params);
     Evaluator.loadWin(gameData, socket);
     Evaluator.loadRoles(gameData, socket, params);
-    Evaluator.changeLoadActionsForPlayers(gameData, socket);
+    Evaluator.loadActionsForPlayers(gameData, socket);
 
 
     // appel en dernier afin d'avoir les données les plus à jour possible
