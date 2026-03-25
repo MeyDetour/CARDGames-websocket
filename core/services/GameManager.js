@@ -12,8 +12,7 @@ export default class GameManager {
   constructor() {}
 
   static startGame(gameData, socket) {
-
-    engineLogger.info("Do Engine Action : startGame")
+    engineLogger.info("Do Engine Action : startGame");
     gameData.data.logs.push("La partie commence");
     gameData.data.state.value = "inProgress";
     gameLogger.info("EVENTS : Check onGameStart Events");
@@ -26,9 +25,8 @@ export default class GameManager {
   }
 
   static startOfManche(gameData, socket) {
-
-    engineLogger.info("Do Engine Action : startOFManche")
-    gameData.data.logs.push("Début de la manche"); 
+    engineLogger.info("Do Engine Action : startOFManche");
+    gameData.data.logs.push("Début de la manche");
     gameLogger.info("EVENTS : Check eachStartOfManche Events");
     Evaluator.loadDemon(gameData, socket, {
       originEvent: "eachStartOfManche",
@@ -38,9 +36,8 @@ export default class GameManager {
   }
 
   static endOfManche(gameData, socket) {
-
-    engineLogger.info("Do Engine Action : endOfManche")
-    gameData.data.logs.push("fin de la manche"); 
+    engineLogger.info("Do Engine Action : endOfManche");
+    gameData.data.logs.push("fin de la manche");
     gameLogger.info("EVENTS : Check eachEndOfManche Events");
 
     Evaluator.loadDemon(gameData, socket, {
@@ -51,8 +48,7 @@ export default class GameManager {
   }
 
   static changeTour(gameData, socket) {
-
-    engineLogger.info("Do Engine Action : changeTour")
+    engineLogger.info("Do Engine Action : changeTour");
     gameData.data.logs.push("Changement d'un tour");
     if (gameData.roomInDb.params.tours.sens === "incrementation") {
       gameData.data.tour += 1;
@@ -65,29 +61,28 @@ export default class GameManager {
       originEvent: "onChangeTour",
     });
     return {};
-  } 
+  }
   static onChangeManche(gameData, socket) {
-
-    engineLogger.info("Do Engine Action : onChangeManche")
+    engineLogger.info("Do Engine Action : onChangeManche");
 
     gameData.data.logs.push("Changement d'une manche");
-      
-      gameData.data.manche += 1;
-      gameData.data.tour = 0
-    
+
+    gameData.data.manche += 1;
+    gameData.data.tour = 0;
+
     gameData.data.currentPlayerPosition.value = 1;
     Evaluator.loadDemon(gameData, socket, {
       originEvent: "startOfManche",
     });
-    return {event:"startOfManche"};
+    return { event: "startOfManche" };
   }
   static changeCurrentPlayer(gameData, socket) {
-    engineLogger.info("Do Engine Action : changeCurrentPlayer")
+    engineLogger.info("Do Engine Action : changeCurrentPlayer");
     let nextP = null;
     do {
       nextP = PlayerManager.getNextPlayer(
         gameData,
-        gameData.data.currentPlayerPosition.value
+        gameData.data.currentPlayerPosition.value,
       );
 
       gameData.data.currentPlayerPosition.value = nextP.position;
@@ -97,11 +92,16 @@ export default class GameManager {
 
   static engine(gameData, socket, params = {}) {
     //console.log(LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+    if (!gameData) {
+      GameDataError.notFound(socket, roomId);
+      return;
+    }
+
     if (!params) {
       params = {};
     }
     engineLogger.info(
-      "GameManager engine called with params :>>  " + JSON.stringify(params)
+      "GameManager engine called with params :>>  " + JSON.stringify(params),
     );
     if (params.event && params.event === "startGame") {
       params = this.startGame(gameData, socket);
@@ -111,10 +111,10 @@ export default class GameManager {
     }
     if (params.event && params.event === "onChangeTour") {
       params = this.changeTour(gameData, socket);
-    }  
+    }
     if (params.event && params.event === "onChangeManche") {
       params = this.onChangeManche(gameData, socket);
-    }  
+    }
     if (params.event && params.event === "startOfManche") {
       params = this.startOfManche(gameData, socket);
     }
@@ -129,14 +129,14 @@ export default class GameManager {
           PlayerManager.verifyIsPlayerCanDoAction(
             params.playerId,
             gameData,
-            params.action
+            params.action,
           )
         ) {
           ActionManager.applyCurrentPlayerAction(
             gameData,
             socket,
             ActionManager.getActionFromName(gameData, params.action),
-            params.playerId
+            params.playerId,
           );
           if (params.actionType ? params.actionType != "askPlayer" : true) {
             params = this.changeCurrentPlayer(gameData, socket);
@@ -158,19 +158,16 @@ export default class GameManager {
     }
 
     //check actions for player
- 
+
     Evaluator.loadDemon(gameData, socket, params);
     Evaluator.loadWin(gameData, socket);
     Evaluator.loadRoles(gameData, socket, params);
     Evaluator.loadActionsForPlayers(gameData, socket);
 
-
     // appel en dernier afin d'avoir les données les plus à jour possible
-    Evaluator.loadGlobalValueStatic(gameData, socket); 
-
+    Evaluator.loadGlobalValueStatic(gameData, socket);
 
     roomManager.sendGameChangeSignal(gameData.roomId);
- 
   }
 }
 

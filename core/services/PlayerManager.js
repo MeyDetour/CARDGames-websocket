@@ -9,7 +9,10 @@ export default class PlayerManager {
       const msg = `Game Data is undefined in PlayerManager.getPlayer(playerPosition=${playerPosition})`;
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
     }
     if (playerPosition > gameData.data.players.length) {
       playerPosition = (playerPosition % gameData.data.players.length) - 1;
@@ -18,13 +21,16 @@ export default class PlayerManager {
     }
     return gameData.data.players[playerPosition];
   }
-  static getNextPlayer(gameData, currentPlayerPosition) { 
+  static getNextPlayer(gameData, currentPlayerPosition) {
     if (!gameData) {
       const msg = `Game Data is undefined in PlayerManager.getNextPlayer(currentPlayerPosition=${currentPlayerPosition})`;
       playerManagerLogger.error(msg);
 
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
       return null;
     }
     let playerIsPrevious = false;
@@ -44,7 +50,10 @@ export default class PlayerManager {
       const msg = `Game Data is undefined in PlayerManager.isLastUser(playerPosition=${playerPosition})`;
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
       return null;
     }
     if (
@@ -61,7 +70,10 @@ export default class PlayerManager {
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       return null;
     }
@@ -78,10 +90,17 @@ export default class PlayerManager {
     for (let gain of gainList) {
       gainObject[gain.id] = { value: 0 };
     }
+
+     let globalValueOfPlayer = { ...gameData.roomInDb.playerGlobalValue };
+    for (let key of Object.keys(globalValueOFPlayer)) {
+      globalValueOfPlayer[key].value = globalValueOfPlayer[key].defaultValue
+        ? globalValueOfPlayer[key].defaultValue
+        : TypeManager.getDefaultValueOfType(globalValueOfPlayer[key].type);
+    }
     return {
       // order in list is the order of turn
       ...baseObecjt,
-      ...globalValueOFPlayer,
+      ...globalValueOfPlayer,
       gain: { type: "object", value: gainObject },
       handDeck: { type: "cardList", value: [] }, //card id
       personalHandDeck: { type: "cardList", value: [] }, //card id
@@ -125,7 +144,27 @@ export default class PlayerManager {
     if (log) playerManagerLogger.debug("==========UPDATE PLAYER============");
     if (hardlog) LoggerClass.objectToString(gameData.data.players);
     if (log) LoggerClass.logConsoleGridOldNew(player, playerObject);
-
+    let gainObject = {};
+    for (let gain of gainList) {
+      gainObject[gain.id] = { value: 0 };
+    }
+    return {
+      // order in list is the order of turn
+      ...baseObecjt,
+      ...globalValueOFPlayer,
+      gain: { type: "object", value: gainObject },
+      handDeck: { type: "cardList", value: [] }, //card id
+      personalHandDeck: { type: "cardList", value: [] }, //card id
+      personalHandDiscard: { type: "cardList", value: [] }, // card id
+      hasPlayed: { type: "boolean", value: false },
+      haswin: { type: "boolean", value: false },
+      actions: { type: "array", value: [] },
+      roles: { type: "array", value: [] },
+      attachedEventForTour: {
+        type: "array",
+        value: [],
+      },
+    };
     if (playerIndex != null) {
       if (log)
         playerManagerLogger.debug(
@@ -144,7 +183,10 @@ export default class PlayerManager {
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
     }
   }
@@ -239,5 +281,40 @@ export default class PlayerManager {
       return true;
     }
     return false;
+  }
+  static restartPlayers(gameData) {
+    // on itere dans les joueurs
+    // on utilise updatePlayerObject pour mettre à jour les joueurs
+    // plutot que d'ecraser data.players afin d'eviter
+    // les effets de bord et problemes de réferences
+    let gainObject = {};
+    for (let gain of gainList) {
+      gainObject[gain.id] = { value: 0 };
+    }
+    let globalValueOfPlayer = { ...gameData.roomInDb.playerGlobalValue };
+    for (let key of Object.keys(globalValueOfPlayer)) {
+      globalValueOfPlayer[key].value = globalValueOfPlayer[key].defaultValue
+        ? globalValueOfPlayer[key].defaultValue
+        : TypeManager.getDefaultValueOfType(globalValueOfPlayer[key].type);
+    }
+    gameData.data.players.forEach((player) => {
+      let newPlayer = {...player,...globalValueOfPlayer};
+      newPlayer.hasPlayed = false;
+      newPlayer.hasWin = false;
+      newPlayer.handDeck = { type: "cardList", value: [] }; //card id
+      newPlayer.personalHandDeck = { type: "cardList", value: [] }; //card id
+      newPlayer.personalHandDiscard = { type: "cardList", value: [] }; // card id
+      newPlayer.hasPlayed = { type: "boolean", value: false };
+      newPlayer.haswin = { type: "boolean", value: false };
+      newPlayer.actions = { type: "array", value: [] };
+      newPlayer.roles = { type: "array", value: [] };
+      newPlayer.attachedEventForTour = {
+        type: "array",
+        value: [],
+      };
+      newPlayer.gain = { type: "object", value: { ...gainObject } };
+      this.updatePlayerObject(newPlayer, gameData);
+    });
+ 
   }
 }

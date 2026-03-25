@@ -1,10 +1,10 @@
-import { Logger, LoggerClass } from "../../logger/logger.js"; 
+import { Logger, LoggerClass } from "../../logger/logger.js";
 import { errorStack } from "../../error/ErrorStack.js";
 
 export class TypeManager {
   static isBool(str) {
     if (typeof str === "boolean") return true;
-    if( str === "true" || str === "false")  return true;
+    if (str === "true" || str === "false") return true;
     return false;
   }
   static strToBool(str) {
@@ -18,9 +18,10 @@ export class TypeManager {
     return type1 == type2;
   }
 
-  static isDefined(elt) {return elt !== null && elt !== undefined && !Number.isNaN(elt);  }
+  static isDefined(elt) {
+    return elt !== null && elt !== undefined && !Number.isNaN(elt);
+  }
   static getType(elt) {
-
     if (Array.isArray(elt)) return "array";
     if (elt === 1 || elt === 0) return "number";
     if (parseInt(elt)) return "number";
@@ -30,7 +31,12 @@ export class TypeManager {
     const msg = "Cannot get type of " + elt;
     typeManager.error(msg);
     LoggerClass.logFileLocalisation();
-    try { errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse())); } catch(e) {}
+    try {
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
+    } catch (e) {}
     return null;
   }
   static getFormatedType(elt) {
@@ -42,6 +48,23 @@ export class TypeManager {
       default:
         return elt;
     }
+  }
+  static getDefaultValueOfType(type) {
+    let value;
+    if (type == "number") {
+      value = 0;
+    } else if (type == "string") {
+      value = "";
+    } else if (type == "boolean") {
+      value = false;
+    } else if (type === "object") {
+      value = {};
+    } else if (type == "array" || type == "cardList") {
+      value = [];
+    } else {
+      value = null;
+    }
+    return value
   }
 }
 

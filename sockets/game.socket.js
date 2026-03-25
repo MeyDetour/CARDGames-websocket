@@ -2,11 +2,13 @@
 // NOTE: You must add the module call in 'sockets/index.js' as follows:
 // GameSocket.listen(io, socket);
 
+import GameDataError from "../core/error/GameDataError.js";
 import GameManager from "../core/services/GameManager.js";
 import { roomManager } from "../core/services/RoomManager.js";
 import AppError from "../core/error/AppError.js";
 import { Logger, LoggerClass } from "../core/logger/logger.js";
-import Event from "../core/engine/Event.js"; 
+import Event from "../core/engine/Event.js";
+import GameDataError from "../core/error/GameDataError.js";
 const gameSocket = Logger("GameSocket");
 export default class GameSocket {
   static listen(io, socket) {
@@ -14,28 +16,19 @@ export default class GameSocket {
       let gameData = roomManager.getRoom(roomId);
 
       if (!gameData) {
-        new AppError(socket, "La room n'existe pas", {
-          code: "ROOM_NOT_FOUND",
-          details: { roomId },
-        });
+        GameDataError.notFound(socket, roomId);
         return;
       }
 
       if (gameData.data.state === "inProgress") {
-        new AppError(socket, "La partie à dejà commencé", {
-          code: "ALREADY_IN_PROGRESS",
-          details: { roomId },
-        });
+        GameDataError.alreadyInProgress(socket, roomId);
         return;
       }
       if (
         gameData.roomInDb.params.globalGame.minPlayer >
         gameData.data.players.length
       ) {
-        new AppError(socket, "There is not enought player", {
-          code: "NOT_ENOUGHT_PLAYER",
-          details: { roomId },
-        });
+        GameDataError.notEnoughPlayers(socket, roomId);
         return;
       }
       // LoggerClass.objectToString(gameData.data);
@@ -43,13 +36,9 @@ export default class GameSocket {
     });
 
     socket.on("doAction", ({ playerId, roomId, action, actionType }) => {
-      gameSocket.info("========ACTION FROM PLAYER");
       let gameData = roomManager.getRoom(roomId);
       if (!gameData) {
-        new AppError(socket, "La room n'existe pas", {
-          code: "ROOM_NOT_FOUND",
-          details: { roomId },
-        });
+        GameDataError.notFound(socket, roomId);
         return;
       }
       GameManager.engine(gameData, socket, {
@@ -61,17 +50,10 @@ export default class GameSocket {
     });
 
     socket.on("playerInsertedValue", ({ roomId, event, obj, params }) => {
-      gameSocket.debug("roomid received " + roomId);
-
       gameSocket.debug("Get value from frontend ");
-      LoggerClass.objectToString(event);
-      LoggerClass.objectToString(obj);
       if (!obj.insertedValue) {
-        new AppError(socket, "Inserted value is missing", {
-              code: "VALUE_MISSING",
-              details: { roomId },
-            });
-            return;
+        EventError.notFoundInsertedValue(socket, roomId);
+        return;
       }
 
       if (event.event.requiresInput.type == "number") {
@@ -80,16 +62,14 @@ export default class GameSocket {
 
       if (event.event.withValue) {
         for (let eventInWVE of event.event.withValue) {
-          // call here to get last update of gameData
+          // call here in iteration to get last update of gameData
+          // because maybe precedent event has changed data
           let gameData = roomManager.getRoom(roomId);
-
           if (!gameData) {
-            new AppError(socket, "La room n'existe pas", {
-              code: "ROOM_NOT_FOUND",
-              details: { roomId },
-            });
+            GameDataError.notFound(socket, roomId);
             return;
           }
+
           Event.applyWithValueEvent(eventInWVE, socket, gameData, params);
           roomManager.sendGameChangeSignal(roomId);
           GameManager.engine(gameData, socket, {
@@ -98,6 +78,13 @@ export default class GameSocket {
         }
       }
     });
-  
+    socket.on("replayGame", () => {
+      let gameData = roomManager.getRoom(socket.data.roomId);
+      if (!gameData) {
+        GameDataError.notFound(socket, roomId);
+        return;
+      }
+      roomManager.replayGame(gameData, socket);
+    });
   }
 }

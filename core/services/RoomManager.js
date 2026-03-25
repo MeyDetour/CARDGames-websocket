@@ -12,7 +12,7 @@ class RoomManager {
     this.rooms = new Map();
   }
 
-  isExistingId(id) { 
+  isExistingId(id) {
     return this.rooms.has(id);
   }
 
@@ -40,7 +40,10 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       return;
     }
@@ -49,7 +52,10 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       return;
     }
@@ -59,7 +65,10 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       return;
     }
@@ -86,23 +95,13 @@ class RoomManager {
     let globalValues = {};
     for (let key of Object.keys(gameInDB["globalValue"])) {
       let type = gameInDB["globalValue"][key].type;
-      let value;
-      if (type == "number") {
-        value = 0;
-      } else if (type == "string") {
-        value = "";
-      } else if (type == "boolean") {
-        value = false;
-      } else if (type === "object") {
-        value = {};
-      } else if (type == "array" || type == "cardList") {
-        value = [];
-      } else {
-        value = null;
-      }
-
-      globalValues[key] = { ...gameInDB["globalValue"][key], value: value };
-    } 
+      globalValues[key] = {
+        ...gameInDB["globalValue"][key],
+        value: gameInDB["globalValue"][key].defaultValue
+          ? gameInDB["globalValue"][key].defaultValue
+          : TypeManager.getDefaultValueOfType(type),
+      };
+    }
     let gainObject = {};
     for (let gain of gameInDB["assets"]["gains"]) {
       gainObject[gain.id] = { value: 0 };
@@ -128,19 +127,19 @@ class RoomManager {
           type: "playerList",
           value: [],
         },
-        globalValueStatic : gameInDB.globalValueStatic || {},
+        globalValueStatic: gameInDB.globalValueStatic || {},
         currentPlayerPosition: { value: 1 },
         tour: 0,
         manche: 0,
         ...gameInDB["globalValue"],
 
-        deck:{
-          type:"cardList",
-          value:Object.keys(gameInDB.assets.cards).map(key=>parseInt(key))
+        deck: {
+          type: "cardList",
+          value: Object.keys(gameInDB.assets.cards).map((key) => parseInt(key)),
         },
-        discardDeck:{
-          type:"cardList",
-          value:[]
+        discardDeck: {
+          type: "cardList",
+          value: [],
         },
         //  liste des gains possibles dans le jeu avec leur valeur actuelle pour cette partie (qui peut évoluer pendant la partie) , ex : gainObject = { gainId1 : {value: 2} , gainId2 : {value: 0} }
         gain: {
@@ -174,19 +173,6 @@ class RoomManager {
     socket.to(roomID).emit("playerHasJoinedRoom", gameData);
   }
 
-  sendGameChangeSignal(roomID) {
-    roomLogger.info("SEND GAME CHANGE SINGAL");
-    let gameData = this.getRoom(roomID);
-    if (gameData) {
-      for (let currentPlayer of gameData.data.players) {
-        io.to(currentPlayer.socketID).emit("gameChanges", {
-          gameData,
-          currentPlayer,
-        });
-      }
-    }
-  }
-
   joinRoom(roomID, pseudo, socket) {
     roomLogger.info(pseudo + "A rejoin la room");
     if (!roomID) {
@@ -195,7 +181,10 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       return;
     }
@@ -205,7 +194,10 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       return;
     }
@@ -215,7 +207,10 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       return;
     }
@@ -251,9 +246,67 @@ class RoomManager {
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
       try {
-        errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
       } catch (e) {}
       new AppError(socket, "Id incorrect");
+    }
+  }
+  replayGame(gameData, socket) {
+    //reset players
+    PlayerManager.restartPlayers(gameData);
+
+    // reset global values
+    for (let key of Object.keys(gameData.data["globalValue"])) {
+      gameData.data["globalValue"][key].value = gameData.roomInDb.globalValue[
+        key
+      ].defaultValue
+        ? gameData.roomInDb.globalValue[key].defaultValue
+        : TypeManager.getDefaultValueOfType(
+            gameData.roomInDb.globalValue[key].type,
+          );
+    }
+
+    // reset gain and cards
+    for (let key of Object.keys(gameData.data.gain.value)) {
+      gameData.data.gain.value[key].value = 0;
+    }
+
+    gameData.data.messages = [];
+    gameData.data.logs = [];
+    gameData.data.state.Value = "waitingPlayers";
+    gameData.data.boardCard.value = [];
+    gameData.data.allPlayersHasPlayed.value = false;
+    gameData.data.winners.value = [];
+
+    // dont reset globalValueStatic because they are auto reload at start of game
+    gameData.data.currentPlayerPosition = { value: 1 };
+    gameData.data.tour = 0;
+    gameData.data.manche = 0;
+ gameData.data.deck.value =   Object.keys(gameData.roomInDb.assets.cards).map((key) => parseInt(key)),
+    gameData.data.discardDeck.value = [];
+
+
+
+    // TO DO 
+    gameData.data.currentPlayerPosition.value = 1;
+    gameData.data.state.value = "playing"; 
+    gameData.data.groupPot.value = gainObject;
+    this.sendGameChangeSignal(gameData.roomId);
+  }
+
+  sendGameChangeSignal(roomID) {
+    roomLogger.info("SEND GAME CHANGE SINGAL");
+    let gameData = this.getRoom(roomID);
+    if (gameData) {
+      for (let currentPlayer of gameData.data.players) {
+        io.to(currentPlayer.socketID).emit("gameChanges", {
+          gameData,
+          currentPlayer,
+        });
+      }
     }
   }
 
