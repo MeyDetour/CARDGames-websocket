@@ -5,6 +5,8 @@ import PlayerManager from "./PlayerManager.js";
 import AppError from "../error/AppError.js";
 import { MessagerieManager } from "./MessagerieManager.js";
 import { io } from "../../server.js";
+import { TypeManager } from "./helper/TypeManager.js";
+
 const roomLogger = Logger("RoomManager");
 
 class RoomManager {
@@ -259,8 +261,8 @@ class RoomManager {
     PlayerManager.restartPlayers(gameData);
 
     // reset global values
-    for (let key of Object.keys(gameData.data["globalValue"])) {
-      gameData.data["globalValue"][key].value = gameData.roomInDb.globalValue[
+    for (let key of Object.keys(gameData.roomInDb.globalValue)) {
+      gameData.data[key].value = gameData.roomInDb.globalValue[
         key
       ].defaultValue
         ? gameData.roomInDb.globalValue[key].defaultValue
@@ -276,24 +278,20 @@ class RoomManager {
 
     gameData.data.messages = [];
     gameData.data.logs = [];
-    gameData.data.state.Value = "waitingPlayers";
+    gameData.data.state.value = "waitingPlayers";
     gameData.data.boardCard.value = [];
     gameData.data.allPlayersHasPlayed.value = false;
     gameData.data.winners.value = [];
 
     // dont reset globalValueStatic because they are auto reload at start of game
-    gameData.data.currentPlayerPosition = { value: 1 };
+    gameData.data.currentPlayerPosition.value = 1 
     gameData.data.tour = 0;
     gameData.data.manche = 0;
- gameData.data.deck.value =   Object.keys(gameData.roomInDb.assets.cards).map((key) => parseInt(key)),
-    gameData.data.discardDeck.value = [];
-
-
-
-    // TO DO 
-    gameData.data.currentPlayerPosition.value = 1;
-    gameData.data.state.value = "playing"; 
-    gameData.data.groupPot.value = gainObject;
+    ((gameData.data.deck.value = Object.keys(
+      gameData.roomInDb.assets.cards,
+    ).map((key) => parseInt(key))),
+      (gameData.data.discardDeck.value = []));
+  
     this.sendGameChangeSignal(gameData.roomId);
   }
 

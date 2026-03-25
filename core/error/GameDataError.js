@@ -1,5 +1,5 @@
 // Gestion centralisée des erreurs liées à gameData
-import AppError from "../core/error/AppError.js";
+import AppError from "..//error/AppError.js";
 
 export default class GameDataError {
   static notFound(socket, roomId) {

@@ -7,8 +7,7 @@ import GameManager from "../core/services/GameManager.js";
 import { roomManager } from "../core/services/RoomManager.js";
 import AppError from "../core/error/AppError.js";
 import { Logger, LoggerClass } from "../core/logger/logger.js";
-import Event from "../core/engine/Event.js";
-import GameDataError from "../core/error/GameDataError.js";
+import Event from "../core/engine/Event.js"; 
 const gameSocket = Logger("GameSocket");
 export default class GameSocket {
   static listen(io, socket) {
@@ -79,6 +78,8 @@ export default class GameSocket {
       }
     });
     socket.on("replayGame", () => {
+
+      console.log("REPLAY GAME");
       let gameData = roomManager.getRoom(socket.data.roomId);
       if (!gameData) {
         GameDataError.notFound(socket, roomId);
