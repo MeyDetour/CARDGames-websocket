@@ -39,12 +39,19 @@ export default class PlayerManager {
         playerIsPrevious = true;
         continue;
       }
+      // permet de récupérer le joueur suivant
+      // car on est sur d'avoir croiser le joueur actuel
+      // on utilise pas la position car elle peut être désordonné
+      // et ne pas refléter l'ordre de jeu
       if (playerIsPrevious) {
         return p;
       }
     }
+    // Valeur par défaut a retourner si on ne trouve pas de joueur statisfaisant
     return gameData.data.players[0];
   }
+  // DONT SET NEXT PLAYHER TO A SPECTATOR
+
   static isLastUser(gameData, playerPosition) {
     if (!gameData) {
       const msg = `Game Data is undefined in PlayerManager.isLastUser(playerPosition=${playerPosition})`;
@@ -84,6 +91,45 @@ export default class PlayerManager {
     }
     return null;
   }
+  static allPlayerHasFinished(gameData) {
+    let result = true;
+    for (let p of gameData.data.players) {
+      if (!p.haswin.value && !p.hasloose.value) {
+        result = false;
+        break;
+      }
+    }
+    return result;
+  }
+  static getStartPlayer(gameData) {
+    let nextP = PlayerManager.getPlayerWithPosition(gameData, 1);
+    while (PlayerManager.isPlayerActifInGame(nextP)) {
+      nextP = PlayerManager.getNextPlayer(gameData, 1);
+
+      gameData.data.currentPlayerPosition.value = nextP.position;
+    }
+    return nextP;
+  }
+  static getPlayerWithPosition(gameData, playerPosition) {
+    if (!gameData) {
+      const msg = `Game Data is undefined in PlayerManager.getPlayerWithPosition(playerPosition=${playerPosition})`;
+      playerManagerLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      try {
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
+      } catch (e) {}
+      return null;
+    }
+    for (let p of gameData.data.players) {
+      if (p.position === playerPosition) {
+        return p;
+      }
+    }
+    return null;
+  }
 
   static createPlayerOBject(baseObecjt, globalValueOFPlayer, gainList) {
     let gainObject = {};
@@ -91,7 +137,7 @@ export default class PlayerManager {
       gainObject[gain.id] = { value: 0 };
     }
 
-     let globalValueOfPlayer = structuredClone(globalValueOFPlayer);
+    let globalValueOfPlayer = structuredClone(globalValueOFPlayer);
     for (let key of Object.keys(globalValueOfPlayer)) {
       globalValueOfPlayer[key].value = globalValueOfPlayer[key].defaultValue
         ? globalValueOfPlayer[key].defaultValue
@@ -107,8 +153,10 @@ export default class PlayerManager {
       personalHandDiscard: { type: "cardList", value: [] }, // card id
       hasPlayed: { type: "boolean", value: false },
       haswin: { type: "boolean", value: false },
+      hasloose: { type: "boolean", value: false },
       actions: { type: "array", value: [] },
       roles: { type: "array", value: [] },
+      isSpectator: { type: "boolean", value: false },
       attachedEventForTour: {
         type: "array",
         value: [],
@@ -144,7 +192,7 @@ export default class PlayerManager {
     if (log) playerManagerLogger.debug("==========UPDATE PLAYER============");
     if (hardlog) LoggerClass.objectToString(gameData.data.players);
     if (log) LoggerClass.logConsoleGridOldNew(player, playerObject);
-   
+
     if (playerIndex != null) {
       if (log)
         playerManagerLogger.debug(
@@ -188,6 +236,11 @@ export default class PlayerManager {
         }
       }
     }
+  }
+  static isPlayerActifInGame(player) {
+    return (
+      player.haswin.value || player.isSpectator.value || player.hasloose.value
+    );
   }
 
   static changePlayerOrder(order, gameData) {
@@ -278,16 +331,18 @@ export default class PlayerManager {
         : TypeManager.getDefaultValueOfType(globalValueOfPlayer[key].type);
     }
     gameData.data.players.forEach((player) => {
-      let newPlayer = {...player,...globalValueOfPlayer};
+      let newPlayer = { ...player, ...globalValueOfPlayer };
       console.log(newPlayer);
-      newPlayer.hasPlayed.value = false; 
-      newPlayer.handDeck.value =  [] ; //card id
-      newPlayer.personalHandDeck.value = [] ; //card id
-      newPlayer.personalHandDiscard.value = [] ; // card id
       newPlayer.hasPlayed.value = false;
+      newPlayer.handDeck.value = []; //card id
+      newPlayer.personalHandDeck.value = []; //card id
+      newPlayer.personalHandDiscard.value = []; // card id
+      newPlayer.hasPlayed.value = false;
+      newPlayer.hasloose.value = false;
+      newPlayer.isSpectator.value = false;
       newPlayer.haswin.value = false;
-      newPlayer.actions.value = [] ;
-      newPlayer.roles.value = [] ;
+      newPlayer.actions.value = [];
+      newPlayer.roles.value = [];
       newPlayer.attachedEventForTour = {
         type: "array",
         value: [],
@@ -295,6 +350,15 @@ export default class PlayerManager {
       newPlayer.gain = { type: "object", value: { ...gainObject } };
       this.updatePlayerObject(newPlayer, gameData);
     });
- 
+  }
+
+  static setPlayerAsSpectator(playerId, gameData, socket) {
+    for (let p of gameData.data.players) {
+      if (p.id === playerId) {
+        p.isSpectator.value = true;
+        this.updatePlayerObject(p, gameData);
+        socket.to(p.socketID).emit("youAreSpectator");
+      }
+    }
   }
 }

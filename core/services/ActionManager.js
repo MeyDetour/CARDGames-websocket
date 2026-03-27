@@ -45,6 +45,11 @@ export default class ActionManager {
               log: false,
             })
           : true;
+
+        if (PlayerManager.isPlayerActifInGame(currentPlayer)) {
+          canDoAction = false;
+          console.error("player is not actif in game : cant do action");
+        }
         fileLogger.log(`Can do action: ${canDoAction}`);
         if (canDoAction && playerId) {
           actionManagerLogger.debug("Load current player action ");

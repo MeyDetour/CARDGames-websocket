@@ -1,7 +1,7 @@
 // Utility: Handles all incoming requests (listening) and data outputs (emissions) for rooms.
 // NOTE: You must add the module call in 'sockets/index.js' as follows:
 // RoomSocket.listen(io, socket);
-import {MessagerieManager} from "../core/services/MessagerieManager.js"
+import { MessagerieManager } from "../core/services/MessagerieManager.js";
 import { roomManager } from "../core/services/RoomManager.js";
 
 export default class RoomSocket {
@@ -13,20 +13,23 @@ export default class RoomSocket {
     socket.on("joinRoom", ({ roomId, pseudo }) => {
       roomManager.joinRoom(roomId, pseudo, socket);
     });
-    socket.on("isExistingRoom", ({ roomId , pathOnEchec}) => {
+    socket.on("isExistingRoom", ({ roomId, pathOnEchec }) => {
+      let roomIDUppercase = roomId.toUpperCase();
 
-     let   roomIDUppercase = roomId.toUpperCase();
-
-        console.log("Verify if "+roomId+ " exist ");
-        console.log(roomManager.isExistingId(roomIDUppercase)); 
-        let room = roomManager.getRoom(roomIDUppercase)
-        let result = !!room
-        let gameId = room ? room.roomInDb.id : null
-      socket.emit("isExistingRoomResult",{roomId : roomIDUppercase, result , gameId ,pathOnEchec } );
+      console.log("Verify if " + roomId + " exist ");
+      console.log(roomManager.isExistingId(roomIDUppercase));
+      let room = roomManager.getRoom(roomIDUppercase);
+      let result = !!room;
+      let gameId = room ? room.roomInDb.id : null;
+      socket.emit("isExistingRoomResult", {
+        roomId: roomIDUppercase,
+        result,
+        gameId,
+        pathOnEchec,
+      });
     });
-    
     socket.on("newMessageOnmessagerie", (message) => {
-    MessagerieManager.sendMessage(socket, message); 
+      MessagerieManager.sendMessage(socket, message);
     });
   }
 }

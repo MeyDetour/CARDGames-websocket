@@ -6,6 +6,9 @@ import { Logger, LoggerClass } from "../logger/logger.js";
 import PlayerManager from "../services/PlayerManager.js";
 import { TypeManager } from "../services/helper/TypeManager.js";
 import FileLogger from "../logger/FileLogger.js";
+import { roomManager } from "../services/RoomManager.js";
+import { io } from "../../server.js";
+
 let evaluatorLogger = Logger("evaluator");
 
 /**
@@ -39,9 +42,8 @@ export default class Evaluator {
       "LOAD DEMON",
       "=====================",
     ]);
-     
+
     evaluatorLogger.info(this.evaluatorLogTitle("loadDemon"));
-  
 
     evaluatorLogger.info(
       `[fileLogger] Log file created: ${fileLogger.filepath}`,
@@ -58,7 +60,7 @@ export default class Evaluator {
     if (!params.currentPlayer) {
       evaluatorLogger.warn("There is no current player");
       fileLogger.warn("There is no current player");
-    } 
+    }
     let c = 0;
     for (let demon of gameData.roomInDb.events["demons"]) {
       fileLogger.log(
@@ -189,9 +191,9 @@ export default class Evaluator {
       "LOAD ACTIONS FOR PLAYERS",
       "=====================",
     ]);
-  
+
     evaluatorLogger.info(this.evaluatorLogTitle("loadActionsForPlayers"));
-  
+
     evaluatorLogger.info(
       `[fileLogger] Log file created: ${fileLogger.filepath}`,
     );
@@ -199,6 +201,12 @@ export default class Evaluator {
     let currentPlayerId = PlayerManager.getPlayerWhoHasToPlay(gameData).id;
     for (let p of gameData.data.players) {
       evaluatorLogger.info("search actions for player ID=" + p.id);
+
+      if (p.isSpectator.value) {
+        evaluatorLogger.info("Player is spectator" + p.id);
+        continue;
+      }
+
       fileLogger.log(`search actions for player ID=${p.id}`);
       let player = structuredClone(p);
       player.actions.value = [];
@@ -229,7 +237,7 @@ export default class Evaluator {
       PlayerManager.updatePlayerObject(player, gameData);
     }
   }
- 
+
   /**
    * Charge les variable globale static
    * @param {Object} gameData
@@ -240,9 +248,9 @@ export default class Evaluator {
       "LOAD GLOBAL VALUE STATIC",
       "=========================",
     ]);
-     
+
     evaluatorLogger.info(this.evaluatorLogTitle("loadGlobalValueStatic"));
-  
+
     evaluatorLogger.info(
       `[fileLogger] Log file created: ${fileLogger.filepath}`,
     );
@@ -278,9 +286,9 @@ export default class Evaluator {
       "LOAD ROLES",
       "=====================",
     ]);
-     
+
     evaluatorLogger.info(this.evaluatorLogTitle("loadRoles"));
-  
+
     evaluatorLogger.info(
       `[fileLogger] Log file created: ${fileLogger.filepath}`,
     );
@@ -291,6 +299,10 @@ export default class Evaluator {
         Parser.translateInnerExpression(r.attribution, gameData),
       );
       if (PlayerManager.isPlayerType(player, gameData)) {
+        if (player.isSpectator.value) {
+          continue;
+        }
+
         if (player.roles.value.filter((pr) => pr.nom == r.nom).length === 0) {
           player.roles.value.push(r);
           PlayerManager.updatePlayerObject(player, gameData);
@@ -324,7 +336,7 @@ export default class Evaluator {
 
   static loadWin(gameData, socket) {
     const fileLogger = FileLogger.create(["LOAD WIN", "====================="]);
-    
+
     evaluatorLogger.info(this.evaluatorLogTitle("loadWin"));
     evaluatorLogger.info(
       `[fileLogger] Log file created: ${fileLogger.filepath}`,
@@ -393,8 +405,14 @@ export default class Evaluator {
             },
           );
           fileLogger.log(
+            ` Condition evaluated for playerBoucle ${player.id} - haswin=${player.haswin.value}: IsWinner ? ${result}`,
+          );
+          fileLogger.log(
             ` Résultat condition pour playerBoucle ${player.id}: ${result}`,
           );
+
+          fileLogger.log(" Vainqueurs potentiels :");
+          fileLogger.log(LoggerClass.pretty(winners.map((w) => w.id)));
           // si tous les joueurs doivent respecter la condition pour gagner
           if (!result) {
             allPlayerRespectCondition = false;
@@ -409,6 +427,8 @@ export default class Evaluator {
           }
         }
       }
+      fileLogger.log(" Vainqueurs potentiels :");
+      fileLogger.log(LoggerClass.pretty(winners.map((w) => w.id)));
       // si il y a vainqueur alors victoire
       if (winners.length > 0) {
         victory = true;
@@ -432,6 +452,7 @@ export default class Evaluator {
         gameData.data.winners = winners;
         for (let p of gameData.data.players) {
           p.haswin.value = winners.map((w) => w.id).includes(p.id);
+          p.hasloose.value = !winners.map((w) => w.id).includes(p.id);
           PlayerManager.updatePlayerObject(p, gameData);
         }
         fileLogger.log(
@@ -453,9 +474,25 @@ export default class Evaluator {
           fileLogger.log(
             ` Joueur ${p.id} a gagné, mise à jour de son objet joueur. et envoie d'un signal`,
           );
+
           PlayerManager.updatePlayerObject(p, gameData);
-          socket.to(p.socketID).emit("playerWin", { winner: p });
+          let newGameData = roomManager.getRoom(gameData.roomId);
+          socket
+            .to(p.socketID)
+            .emit("playerWin", { gameData: newGameData, player: p });
+          io.emit("playerWin", { gameData: newGameData, player: p });
         }
+      }
+      if (PlayerManager.allPlayerHasFinished(gameData)) {
+        fileLogger.log(" Tous les joueurs ont terminé, fin de partie.");
+        gameData.data.state.value = "endOfGame";
+        for (let p of gameData.data.players) {
+          if (!p.haswin.value) {
+            p.hasloose.value = true;
+          }
+          PlayerManager.updatePlayerObject(p, gameData);
+        }
+        socket.to(gameData.roomId).emit("gameEnd", { gameData });
       }
     } else {
       fileLogger.log(" Pas de boucle, évaluation directe de la condition");
@@ -487,7 +524,7 @@ export default class Evaluator {
       return "=============LOAD ROLES==============================================================================";
     if (type === "loadActionsForPlayers")
       return "=========================LOAD ACTIONS FOR PLAYERS====================================================";
-     if (type === "loadGlobalValueStatic")
+    if (type === "loadGlobalValueStatic")
       return "====================================================LOAD GLOBAL VALUE STATIC=========================";
     if (type === "loadWin")
       return "===============================================================================LOAD WIN==============";

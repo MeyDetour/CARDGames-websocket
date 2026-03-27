@@ -55,8 +55,10 @@ export default class GameManager {
     } else {
       gameData.data.tour -= 1;
     }
+   let startPlayer = PlayerManager.getStartPlayer(gameData);
 
-    gameData.data.currentPlayerPosition.value = 1;
+    gameData.data.currentPlayerPosition.value = startPlayer;
+
     Evaluator.loadDemon(gameData, socket, {
       originEvent: "onChangeTour",
     });
@@ -86,7 +88,10 @@ export default class GameManager {
       );
 
       gameData.data.currentPlayerPosition.value = nextP.position;
-    } while (nextP.attachedEventForTour.value.includes("skipPlayerTour"));
+    } while (
+      nextP.attachedEventForTour.value.includes("skipPlayerTour") ||
+      PlayerManager.isPlayerActifInGame(nextP)
+    );
     return {};
   }
 

@@ -7,11 +7,13 @@ import GameManager from "../core/services/GameManager.js";
 import { roomManager } from "../core/services/RoomManager.js";
 import AppError from "../core/error/AppError.js";
 import { Logger, LoggerClass } from "../core/logger/logger.js";
-import Event from "../core/engine/Event.js"; 
+import Event from "../core/engine/Event.js";
+import PlayerManager from "../core/services/PlayerManager.js";
 const gameSocket = Logger("GameSocket");
 export default class GameSocket {
   static listen(io, socket) {
-    socket.on("startGame", ({ roomId }) => {
+    socket.on("startGame", () => {
+      let roomId = socket.data.roomId;
       let gameData = roomManager.getRoom(roomId);
 
       if (!gameData) {
@@ -34,8 +36,10 @@ export default class GameSocket {
       GameManager.engine(gameData, socket, { event: "startGame" });
     });
 
-    socket.on("doAction", ({ playerId, roomId, action, actionType }) => {
+    socket.on("doAction", ({ action, actionType }) => {
+      let roomId = socket.data.roomId;
       let gameData = roomManager.getRoom(roomId);
+
       if (!gameData) {
         GameDataError.notFound(socket, roomId);
         return;
@@ -44,12 +48,13 @@ export default class GameSocket {
         event: "doAction",
         action: action,
         actionType: actionType,
-        playerId: playerId,
+        playerId: socket.data.playerId,
       });
     });
 
-    socket.on("playerInsertedValue", ({ roomId, event, obj, params }) => {
+    socket.on("playerInsertedValue", ({ event, obj, params }) => {
       gameSocket.debug("Get value from frontend ");
+      let roomId = socket.data.roomId;
       if (!obj.insertedValue) {
         EventError.notFoundInsertedValue(socket, roomId);
         return;
@@ -77,8 +82,8 @@ export default class GameSocket {
         }
       }
     });
-    socket.on("replayGame", () => {
 
+    socket.on("replayGame", () => {
       console.log("REPLAY GAME");
       let gameData = roomManager.getRoom(socket.data.roomId);
       if (!gameData) {
@@ -86,6 +91,16 @@ export default class GameSocket {
         return;
       }
       roomManager.replayGame(gameData, socket);
+    });
+
+    socket.on("specTheGame", () => {
+      let gameData = roomManager.getRoom(socket.data.roomId);
+      if (!gameData) {
+        GameDataError.notFound(socket, roomId);
+        return;
+      }
+      PlayerManager.setPlayerAsSpectator(socket.data.playerId, gameData,socket);
+      roomManager.sendGameChangeSignal(socket.data.roomId);
     });
   }
 }

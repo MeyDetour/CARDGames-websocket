@@ -294,6 +294,7 @@ class RoomManager {
   
     this.sendGameChangeSignal(gameData.roomId);
   }
+  
 
   sendGameChangeSignal(roomID) {
     roomLogger.info("SEND GAME CHANGE SINGAL");
