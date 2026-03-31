@@ -470,7 +470,9 @@ export default class Evaluator {
         }
         gameData.data.winners = [...gameData.data.winners, ...winners];
         for (let p of winners) {
+
           p.haswin.value = true;
+       
           fileLogger.log(
             ` Joueur ${p.id} a gagné, mise à jour de son objet joueur. et envoie d'un signal`,
           );
@@ -479,8 +481,7 @@ export default class Evaluator {
           let newGameData = roomManager.getRoom(gameData.roomId);
           socket
             .to(p.socketID)
-            .emit("playerWin", { gameData: newGameData, player: p });
-          io.emit("playerWin", { gameData: newGameData, player: p });
+            .emit("playerWin", { gameData: newGameData, player: p }); 
         }
       }
       if (PlayerManager.allPlayerHasFinished(gameData)) {

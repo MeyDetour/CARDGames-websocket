@@ -141,9 +141,7 @@ export default class VariableType extends TypeInterface {
           value = PlayerManager.getStartPlayer(gameData);
         }  else if (elt === "allPlayersInGame") {
           value = gameData.data.players;
-        } else if (elt === "startPlayer") {
-          value = PlayerManager.getStartPlayer(gameData);
-        } else if (elt === "currentPlayer") {
+        }  else if (elt === "currentPlayer") {
           if (params.currentPlayer == null) {
             const msg = `Missing params.currentPlayer for access to 'currentPlayer' in VariableType.splitLogicalList (element=${elt})`;
             variableLogger.error(msg);

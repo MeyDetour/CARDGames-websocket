@@ -606,7 +606,7 @@ export default class Event {
     //},
 
     for (let key of Object.keys(shortWithValueEvent)) {
-      if (key != "id") {
+      if (key != "id" && key !="componentId") {
         let newParam = Parser.translateInnerExpression(
           shortWithValueEvent[key],
           gameData,

@@ -6,12 +6,12 @@ import { roomManager } from "../core/services/RoomManager.js";
 
 export default class RoomSocket {
   static listen(io, socket) {
-    socket.on("createRoom", ({ gameInDB, pseudo }) => {
-      roomManager.createRoom(gameInDB, pseudo, socket);
+    socket.on("createRoom", ({ gameInDB, pseudo ,skin}) => {
+      roomManager.createRoom(gameInDB, pseudo, skin, socket);
     });
 
-    socket.on("joinRoom", ({ roomId, pseudo }) => {
-      roomManager.joinRoom(roomId, pseudo, socket);
+    socket.on("joinRoom", ({ roomId, pseudo,skin }) => {
+      roomManager.joinRoom(roomId, pseudo, skin, socket);
     });
     socket.on("isExistingRoom", ({ roomId, pathOnEchec }) => {
       let roomIDUppercase = roomId.toUpperCase();

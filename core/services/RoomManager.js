@@ -34,7 +34,7 @@ class RoomManager {
     this.rooms.delete(id);
   }
 
-  createRoom(gameInDB, pseudo, socket) {
+  createRoom(gameInDB, pseudo,skin, socket) {
     roomLogger.info(pseudo + "Création d'une room");
 
     if (!gameInDB) {
@@ -80,6 +80,7 @@ class RoomManager {
       {
         position: 1,
         pseudo: pseudo,
+        skin: skin,
         socketID: socket.id,
         id: Identificator.generateId(), // id concerne la room, aucun joueur n'a le meme id dans cette room pusiqu'elle vient d'etre crée
       },
@@ -175,7 +176,7 @@ class RoomManager {
     socket.to(roomID).emit("playerHasJoinedRoom", gameData);
   }
 
-  joinRoom(roomID, pseudo, socket) {
+  joinRoom(roomID, pseudo, skin, socket) {
     roomLogger.info(pseudo + "A rejoin la room");
     if (!roomID) {
       const msg =
@@ -226,6 +227,7 @@ class RoomManager {
         {
           position: gameData.data.players.length + 1,
           pseudo: pseudo,
+          skin: skin,
           socketID: socket.id,
           id: Identificator.generateId(), // id concerne la room, aucun joueur n'a le meme id dans cette room pusiqu'elle vient d'etre crée
         },
