@@ -1,4 +1,5 @@
 import { Logger, LoggerClass } from "../logger/logger.js";
+import {TypeManager} from "./helper/TypeManager.js";
 import { errorStack } from "../error/ErrorStack.js";
 const playerManagerLogger = Logger("PlayerManager");
 export default class PlayerManager {

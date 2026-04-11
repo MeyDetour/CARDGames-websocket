@@ -110,14 +110,14 @@ export default class Event {
     const resultOfEventsLog = true;
 
     const fileLogger = EventFileLogger.create(event,gameData.roomId);
-
+    const gameDataCopy = structuredClone(gameData.data);
     eventLogger.info(
       `🟢 Event exécuté (${fileLogger.order}) : ${event.name} → ${fileLogger.filepath}`,
     );
     fileLogger.log(LoggerClass.pretty(event));
     params.location = fileLogger;
     LoggerClass.objectToString(event);
-
+    let actionForTest = {}
     let action = this.getAction(event, gameData);
     let value = this.getValue(event); 
     let giveElements = this.getGiveElements(event, gameData);
@@ -232,6 +232,7 @@ export default class Event {
             }
             if (action === "updateGlobalValue") {
               actionObject.updateGlobalValue();
+              
             }
           }
 
@@ -377,6 +378,41 @@ export default class Event {
       );
       GameManager.engine(gameData, socket, { event: "afterEvent" });
     }
+
+    // === LOG DIFF DETAILLE ===
+    // Compare l'état du jeu avant et après l'exécution de l'événement
+    function getObjectDiff(obj1, obj2, path = "") {
+      let changes = [];
+      for (const key of Object.keys(obj1)) {
+        const fullPath = path ? path + "." + key : key;
+        if (!(key in obj2)) {
+          changes.push({ type: "deleted", path: fullPath, before: obj1[key], after: undefined });
+        } else if (typeof obj1[key] === "object" && obj1[key] !== null && typeof obj2[key] === "object" && obj2[key] !== null) {
+          changes = changes.concat(getObjectDiff(obj1[key], obj2[key], fullPath));
+        } else if (obj1[key] !== obj2[key]) {
+          changes.push({ type: "modified", path: fullPath, before: obj1[key], after: obj2[key] });
+        }
+      }
+      for (const key of Object.keys(obj2)) {
+        const fullPath = path ? path + "." + key : key;
+        if (!(key in obj1)) {
+          changes.push({ type: "added", path: fullPath, before: undefined, after: obj2[key] });
+        }
+      }
+      return changes;
+    }
+
+    const diff = getObjectDiff(gameDataCopy, gameData.data);
+    if (diff.length > 0) {
+      fileLogger.section("\uD83D\uDD0D Détail des modifications de l'état du jeu :");
+      diff.forEach(change => {
+        fileLogger.log(
+          `[${change.type}] ${change.path} : avant = ${JSON.stringify(change.before)}, après = ${JSON.stringify(change.after)}`
+        );
+      });
+    } else {
+      fileLogger.section("Aucune modification détectée dans l'état du jeu.");
+    }
     // to execute if event doesnot wait answer from player
     if (event.event.withValue && action !== "askPlayer") {
       for (let eventInWVE of event.event.withValue) {
@@ -395,6 +431,12 @@ export default class Event {
       }
     }
 
+    if (gameData.data.isTest){
+      gameData.data.eventsTestLog.push({
+        ...event,
+        diff: diff
+      });
+    }
     if (event.loadMessage){ gameData.data.logs.push(event.loadMessage); socket.to(gameData.roomId).emit("updateGameDataLogs", event.loadMessage);}
   }
 

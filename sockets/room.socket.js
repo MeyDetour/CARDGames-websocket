@@ -6,8 +6,8 @@ import { roomManager } from "../core/services/RoomManager.js";
 
 export default class RoomSocket {
   static listen(io, socket) {
-    socket.on("createRoom", ({ gameInDB, pseudo ,skin}) => {
-      roomManager.createRoom(gameInDB, pseudo, skin, socket);
+    socket.on("createRoom", ({ gameInDB, pseudo ,skin, isTest = false }) => {
+      roomManager.createRoom(gameInDB, pseudo, skin, isTest, socket);
     });
 
     socket.on("joinRoom", ({ roomId, pseudo,skin }) => {

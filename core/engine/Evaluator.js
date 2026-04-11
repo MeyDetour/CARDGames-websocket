@@ -303,10 +303,10 @@ export default class Evaluator {
           continue;
         }
 
-        if (player.roles.value.filter((pr) => pr.nom == r.nom).length === 0) {
+        if (player.roles.value.filter((pr) => pr.name == r.name).length === 0) {
           player.roles.value.push(r);
           PlayerManager.updatePlayerObject(player, gameData);
-          fileLogger.log(`Role ${r.nom} assigned to player ${player.id}`);
+          fileLogger.log(`Role ${r.name} assigned to player ${player.id}`);
         }
       } else {
         evaluatorLogger.error(

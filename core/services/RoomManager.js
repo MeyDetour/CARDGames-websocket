@@ -34,7 +34,7 @@ class RoomManager {
     this.rooms.delete(id);
   }
 
-  createRoom(gameInDB, pseudo,skin, socket) {
+  createRoom(gameInDB, pseudo, skin, isTest, socket) {
     roomLogger.info(pseudo + "Création d'une room");
 
     if (!gameInDB) {
@@ -93,8 +93,14 @@ class RoomManager {
     let roomID = this.#generateRoomId();
     roomID = roomID.toUpperCase();
 
-    //TODO : REMOVE its for test
-
+    // construit l'object global value
+    // ex :
+    // groupPot : {
+    //   display : false,
+    //   type : gainObject,
+    //   value :  0
+    //   }
+    // }
     let globalValues = {};
     for (let key of Object.keys(gameInDB["globalValue"])) {
       let type = gameInDB["globalValue"][key].type;
@@ -113,10 +119,13 @@ class RoomManager {
     let gameData = {
       roomInDb: gameInDB,
       roomId: roomID,
+
       data: {
         players: [player],
+        isTest: isTest,
         messages: [],
         logs: [],
+        eventsTestLog: [], 
         state: { type: "string", value: "waitingPlayers" },
         boardCard: {
           type: "cardList",
@@ -148,14 +157,14 @@ class RoomManager {
         gain: {
           type: "gainObject",
           value: {
-            gainObject,
+            ...gainObject,
           },
         },
         // Pot commun de gain
         groupPot: {
           type: "gainObject",
           value: {
-            gainObject,
+            ...gainObject,
           },
         },
         ...gameInDB["assets"],
@@ -219,6 +228,16 @@ class RoomManager {
     }
 
     let gameData = this.getRoom(roomID);
+
+    // empecher la connexion si c'est un test et qu'elle est en cours
+    if (
+      gameData &&
+      gameData.data.state.value !== "waitingPlayers" &&
+      gameData.data.isTest
+    ) {
+       // TODO : Faire rejoindre en spectateur si possible
+    }
+
     if (gameData) {
       socket.join(roomID);
       socket.data.roomId = roomID;
@@ -264,9 +283,7 @@ class RoomManager {
 
     // reset global values
     for (let key of Object.keys(gameData.roomInDb.globalValue)) {
-      gameData.data[key].value = gameData.roomInDb.globalValue[
-        key
-      ].defaultValue
+      gameData.data[key].value = gameData.roomInDb.globalValue[key].defaultValue
         ? gameData.roomInDb.globalValue[key].defaultValue
         : TypeManager.getDefaultValueOfType(
             gameData.roomInDb.globalValue[key].type,
@@ -286,17 +303,16 @@ class RoomManager {
     gameData.data.winners.value = [];
 
     // dont reset globalValueStatic because they are auto reload at start of game
-    gameData.data.currentPlayerPosition.value = 1 
+    gameData.data.currentPlayerPosition.value = 1;
     gameData.data.tour = 0;
     gameData.data.manche = 0;
     ((gameData.data.deck.value = Object.keys(
       gameData.roomInDb.assets.cards,
     ).map((key) => parseInt(key))),
       (gameData.data.discardDeck.value = []));
-  
+
     this.sendGameChangeSignal(gameData.roomId);
   }
-  
 
   sendGameChangeSignal(roomID) {
     roomLogger.info("SEND GAME CHANGE SINGAL");

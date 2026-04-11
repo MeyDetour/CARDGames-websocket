@@ -72,7 +72,7 @@ export class ConformiteManager {
   static verifyParams(params) {
     this.verifyPrensenceOfRequiredKeys(
       params,
-      ["globalGame", "rendering", "tours", "manches", "cards", "gain", "roles"],
+      ["globalGame", "rendering", "tours", "manches", "cards", "gains", "roles"],
       "params",
     );
 
@@ -147,8 +147,8 @@ export class ConformiteManager {
         cardBoard: "object",
       });
     }
-    if (params.gain) {
-      this.compareObject(params.gain, {
+    if (params.gains) {
+      this.compareObject(params.gains, {
         activation: "boolean",
         groupPot: "boolean",
       });
