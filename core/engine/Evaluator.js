@@ -44,7 +44,6 @@ export default class Evaluator {
     ]);
 
     evaluatorLogger.info(this.evaluatorLogTitle("loadDemon"));
-
     evaluatorLogger.info(
       `[fileLogger] Log file created: ${fileLogger.filepath}`,
     );
@@ -161,6 +160,10 @@ export default class Evaluator {
       if (result) {
         evaluatorLogger.info("le démon est réalisable : " + demon.condition);
         fileLogger.log(`Demon réalisable: ${demon.condition}`);
+        gameData.data.testLogs.push({
+          testType : "demon",
+          ...demon 
+        });
         LoggerClass.objectToString(demon);
 
         for (let id of demon.events) {

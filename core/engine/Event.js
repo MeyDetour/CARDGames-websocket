@@ -6,10 +6,13 @@ import PlayerManager from "../services/PlayerManager.js";
 import { ArrayManager } from "../services/helper/ArrayManager.js";
 import CardManager from "../services/CardManager.js";
 import { TypeManager } from "../services/helper/TypeManager.js";
-import Action from "./action.js";
+import Action from "./Action.js";
 import { errorStack } from "../error/ErrorStack.js";
 import GameManager from "../services/GameManager.js";
 import EventFileLogger from "../logger/EventFileLogger.js"; 
+import {ObjectManager} from "../services/helper/ObjectManager.js";
+
+
 const eventLogger = Logger("Event");
 
 /**
@@ -116,8 +119,7 @@ export default class Event {
     );
     fileLogger.log(LoggerClass.pretty(event));
     params.location = fileLogger;
-    LoggerClass.objectToString(event);
-    let actionForTest = {}
+    LoggerClass.objectToString(event); 
     let action = this.getAction(event, gameData);
     let value = this.getValue(event); 
     let giveElements = this.getGiveElements(event, gameData);
@@ -144,7 +146,7 @@ export default class Event {
         skipEventLog: skipEventLog,
       },
       params,
-      null,
+      null
     );
     if (event["boucle"]) {
       let elts = Parser.translateInnerExpression(event["boucle"], gameData, {
@@ -379,40 +381,7 @@ export default class Event {
       GameManager.engine(gameData, socket, { event: "afterEvent" });
     }
 
-    // === LOG DIFF DETAILLE ===
-    // Compare l'état du jeu avant et après l'exécution de l'événement
-    function getObjectDiff(obj1, obj2, path = "") {
-      let changes = [];
-      for (const key of Object.keys(obj1)) {
-        const fullPath = path ? path + "." + key : key;
-        if (!(key in obj2)) {
-          changes.push({ type: "deleted", path: fullPath, before: obj1[key], after: undefined });
-        } else if (typeof obj1[key] === "object" && obj1[key] !== null && typeof obj2[key] === "object" && obj2[key] !== null) {
-          changes = changes.concat(getObjectDiff(obj1[key], obj2[key], fullPath));
-        } else if (obj1[key] !== obj2[key]) {
-          changes.push({ type: "modified", path: fullPath, before: obj1[key], after: obj2[key] });
-        }
-      }
-      for (const key of Object.keys(obj2)) {
-        const fullPath = path ? path + "." + key : key;
-        if (!(key in obj1)) {
-          changes.push({ type: "added", path: fullPath, before: undefined, after: obj2[key] });
-        }
-      }
-      return changes;
-    }
-
-    const diff = getObjectDiff(gameDataCopy, gameData.data);
-    if (diff.length > 0) {
-      fileLogger.section("\uD83D\uDD0D Détail des modifications de l'état du jeu :");
-      diff.forEach(change => {
-        fileLogger.log(
-          `[${change.type}] ${change.path} : avant = ${JSON.stringify(change.before)}, après = ${JSON.stringify(change.after)}`
-        );
-      });
-    } else {
-      fileLogger.section("Aucune modification détectée dans l'état du jeu.");
-    }
+ 
     // to execute if event doesnot wait answer from player
     if (event.event.withValue && action !== "askPlayer") {
       for (let eventInWVE of event.event.withValue) {
@@ -432,10 +401,7 @@ export default class Event {
     }
 
     if (gameData.data.isTest){
-      gameData.data.eventsTestLog.push({
-        ...event,
-        diff: diff
-      });
+      gameData.data.testLogs.push(actionObject.getActionEventForTest());
     }
     if (event.loadMessage){ gameData.data.logs.push(event.loadMessage); socket.to(gameData.roomId).emit("updateGameDataLogs", event.loadMessage);}
   }

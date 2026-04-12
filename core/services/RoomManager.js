@@ -113,7 +113,7 @@ class RoomManager {
     }
     let gainObject = {};
     for (let gain of gameInDB["assets"]["gains"]) {
-      gainObject[gain.id] = { value: 0 };
+      gainObject[`{gain#${gain.id}}`] = { value: 0 };
     }
 
     let gameData = {
@@ -125,7 +125,7 @@ class RoomManager {
         isTest: isTest,
         messages: [],
         logs: [],
-        eventsTestLog: [], 
+        testLogs: [], 
         state: { type: "string", value: "waitingPlayers" },
         boardCard: {
           type: "cardList",

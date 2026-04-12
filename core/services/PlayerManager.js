@@ -285,7 +285,18 @@ export default class PlayerManager {
   }
 
   static isPlayerType(element, gameData) {
-    if (!element) return false;
+    if (!element) {
+      const msg = `Element is undefined in PlayerManager.isPlayerType(element=${element})`;
+      playerManagerLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      return false
+    }  if (!gameData) {
+      const msg = `GameData is undefined in PlayerManager.isPlayerType(gameData=${gameData})`;
+      playerManagerLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      return false
+    }
+    
     if (element.id) {
       const player = gameData.data.players.filter(
         (v) => v.id === element.id,
