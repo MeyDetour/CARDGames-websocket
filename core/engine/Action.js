@@ -33,6 +33,7 @@ export default class Action {
     gameData,
     logs = {},
     params = {},
+    testType = "event",
     index = null,
   ) {
     this.fileLogger = fileLogger;
@@ -49,7 +50,7 @@ export default class Action {
     this.params = params;
     this.index = index;
     this.actionEventForTest = {
-      testType: "event",
+      testType: testType,
       diffs: [],
       executionDate: new Date(),
       ...event,

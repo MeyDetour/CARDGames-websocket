@@ -60,7 +60,7 @@ export default class Event {
    * @param {Object} [params={}] - Paramètres additionnels passés aux expressions
    * @returns {null|void} retourne null si une erreur empêche l'exécution
    */
-  static ExecuteEvent(event, socket, gameData, params = {}) {
+  static ExecuteEvent(event, socket, gameData, params = {},typeOfEvent="event") {
     if (!gameData) {
       eventLogger.error("Game Data is undefined");
       LoggerClass.logFileLocalisation();
@@ -146,6 +146,7 @@ export default class Event {
         skipEventLog: skipEventLog,
       },
       params,
+      typeOfEvent,
       null
     );
     if (event["boucle"]) {
@@ -361,7 +362,7 @@ export default class Event {
           actionObject.skipPlayerTour();
         }
         if (action === "askPlayer") {
-          socket.emit("askPlayer", { event, params, roomId: gameData.roomId });
+          socket.emit("askPlayer", { event, params });
           eventLogger.debug(
             "Ask player action executed, waiting for response...",
           );
@@ -381,7 +382,17 @@ export default class Event {
       GameManager.engine(gameData, socket, { event: "afterEvent" });
     }
 
+
+    // SAVE LOG DIFF DETAILLE
+    // mettre cette ligne avant l'execution des withValueEvent
+    // sinon dans l'ordre d'execution on verra le withValue 
+    // avant l'execution de l'event principal et pas apres
+    if (gameData.data.isTest){
+      gameData.data.testLogs.push(actionObject.getActionEventForTest());
+    }
+    if (event.loadMessage){ gameData.data.logs.push(event.loadMessage); socket.to(gameData.roomId).emit("updateGameDataLogs", event.loadMessage);}
  
+
     // to execute if event doesnot wait answer from player
     if (event.event.withValue && action !== "askPlayer") {
       for (let eventInWVE of event.event.withValue) {
@@ -399,12 +410,7 @@ export default class Event {
         });
       }
     }
-
-    if (gameData.data.isTest){
-      gameData.data.testLogs.push(actionObject.getActionEventForTest());
-    }
-    if (event.loadMessage){ gameData.data.logs.push(event.loadMessage); socket.to(gameData.roomId).emit("updateGameDataLogs", event.loadMessage);}
-  }
+ }
 
   /**
    * Résout la cible (destinataire) d'un event en évaluant la clause `for`.
@@ -669,6 +675,6 @@ export default class Event {
 
     console.log("params :>> ", params);
 
-    Event.ExecuteEvent(event, socket, gameData, { ...params });
+    Event.ExecuteEvent(event, socket, gameData, { ...params },"withValue");
   }
 }

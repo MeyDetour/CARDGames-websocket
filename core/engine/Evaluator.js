@@ -161,8 +161,10 @@ export default class Evaluator {
         evaluatorLogger.info("le démon est réalisable : " + demon.condition);
         fileLogger.log(`Demon réalisable: ${demon.condition}`);
         gameData.data.testLogs.push({
-          testType : "demon",
-          ...demon 
+          testType: "demon",
+          ...demon, 
+          executionDate: new Date(),
+          id: "o45455efer",
         });
         LoggerClass.objectToString(demon);
 
@@ -473,9 +475,8 @@ export default class Evaluator {
         }
         gameData.data.winners = [...gameData.data.winners, ...winners];
         for (let p of winners) {
-
           p.haswin.value = true;
-       
+
           fileLogger.log(
             ` Joueur ${p.id} a gagné, mise à jour de son objet joueur. et envoie d'un signal`,
           );
@@ -484,7 +485,7 @@ export default class Evaluator {
           let newGameData = roomManager.getRoom(gameData.roomId);
           socket
             .to(p.socketID)
-            .emit("playerWin", { gameData: newGameData, player: p }); 
+            .emit("playerWin", { gameData: newGameData, player: p });
         }
       }
       if (PlayerManager.allPlayerHasFinished(gameData)) {
