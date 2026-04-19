@@ -9,9 +9,8 @@ import { TypeManager } from "../services/helper/TypeManager.js";
 import Action from "./Action.js";
 import { errorStack } from "../error/ErrorStack.js";
 import GameManager from "../services/GameManager.js";
-import EventFileLogger from "../logger/EventFileLogger.js"; 
-import {ObjectManager} from "../services/helper/ObjectManager.js";
-
+import EventFileLogger from "../logger/EventFileLogger.js";
+import { ObjectManager } from "../services/helper/ObjectManager.js";
 
 const eventLogger = Logger("Event");
 
@@ -60,13 +59,19 @@ export default class Event {
    * @param {Object} [params={}] - Paramètres additionnels passés aux expressions
    * @returns {null|void} retourne null si une erreur empêche l'exécution
    */
-  static ExecuteEvent(event, socket, gameData, params = {},typeOfEvent="event") {
+  static ExecuteEvent(
+    event,
+    socket,
+    gameData,
+    params = {},
+    typeOfEvent = "event",
+  ) {
     if (!gameData) {
       eventLogger.error("Game Data is undefined");
       LoggerClass.logFileLocalisation();
       errorStack.addError(
         "Game Data is undefined in Event.ExecuteEvent",
-           LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
 
       return null;
@@ -76,7 +81,7 @@ export default class Event {
       LoggerClass.logFileLocalisation();
       errorStack.addError(
         "Event is undefined in Event.ExecuteEvent",
-           LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
 
       return null;
@@ -112,16 +117,20 @@ export default class Event {
     const skipEventLog = false;
     const resultOfEventsLog = true;
 
-    const fileLogger = EventFileLogger.create(event,gameData.roomId);
-    const gameDataCopy = structuredClone(gameData.data);
-    eventLogger.info(
-      `🟢 Event exécuté (${fileLogger.order}) : ${event.name} → ${fileLogger.filepath}`,
-    );
-    fileLogger.log(LoggerClass.pretty(event));
-    params.location = fileLogger;
-    LoggerClass.objectToString(event); 
+    let fileLogger;
+    if (process.env.EVENT_FILE_LOG) {
+      fileLogger = EventFileLogger.create(event, gameData.roomId);
+
+      eventLogger.info(
+        `🟢 Event exécuté (${fileLogger.order}) : ${event.name} → ${fileLogger.filepath}`,
+      );
+      fileLogger.log(LoggerClass.pretty(event));
+      params.location = fileLogger;
+    }
+
+    LoggerClass.objectToString(event);
     let action = this.getAction(event, gameData);
-    let value = this.getValue(event); 
+    let value = this.getValue(event);
     let giveElements = this.getGiveElements(event, gameData);
 
     const actionObject = new Action(
@@ -147,7 +156,7 @@ export default class Event {
       },
       params,
       typeOfEvent,
-      null
+      null,
     );
     if (event["boucle"]) {
       let elts = Parser.translateInnerExpression(event["boucle"], gameData, {
@@ -155,11 +164,14 @@ export default class Event {
         location: fileLogger,
       });
       //   eventLogger.debug("Liste des elements a parcourir")
-      if (globalEventDetailLog)
+      if (globalEventDetailLog && fileLogger) {
         fileLogger.section(" Il y a  " + elts.length + " elements");
+      }
       if (Array.isArray(elts)) {
         for (let i = 0; i < elts.length; i++) {
-          fileLogger.log("I In boucle :>> ", i);
+          if (fileLogger) {
+            fileLogger.log("I In boucle :>> ", i);
+          }
 
           let destinataireListObject, destinataire;
           let senderListObject, sender;
@@ -206,14 +218,16 @@ export default class Event {
           const conidtion = this.getboucleCondition(event, gameData, params);
 
           if (!conidtion) {
-            fileLogger.log("Condition false for player : ");
-            fileLogger.log(LoggerClass.pretty(destinataire));
+            if (fileLogger) {
+              fileLogger.log("Condition false for player : ");
+              fileLogger.log(LoggerClass.pretty(destinataire));
+            }
             eventLogger.debug("condition :>> ", event.event.condition);
 
             continue;
           }
 
-          if (boucleLog) {
+          if (boucleLog && fileLogger) {
             LoggerClass.logGridFromObject(
               {
                 Sender: sender,
@@ -224,7 +238,7 @@ export default class Event {
                 GiveElements: giveElements,
               },
               `STUDY ELEMENT ${i}`,
-              this.fileLogger,
+              fileLogger,
             );
           }
 
@@ -235,7 +249,6 @@ export default class Event {
             }
             if (action === "updateGlobalValue") {
               actionObject.updateGlobalValue();
-              
             }
           }
 
@@ -282,6 +295,7 @@ export default class Event {
       actionObject.setSenderListObject(senderListObject);
       actionObject.setSender(sender);
 
+      if(fileLogger){
       LoggerClass.logGridFromObject(
         {
           Sender: sender,
@@ -292,9 +306,9 @@ export default class Event {
           GiveElements: giveElements,
         },
         `STUDY ELEMENT NOT IN BOUCLE`,
-        this.fileLogger,
+        fileLogger,
       );
-
+    }
       if (giveElements && destinataire) {
         actionObject.giveElementsTo(
           sender,
@@ -332,8 +346,9 @@ export default class Event {
               event: "onChangeTour",
             });
           }
-
-          LoggerClass.logGridOldNew(before, gameData.data.tour, fileLogger);
+          if (fileLogger) {
+            LoggerClass.logGridOldNew(before, gameData.data.tour, fileLogger);
+          }
         }
         if (action === "changeManche") {
           let before = gameData.data.manche;
@@ -352,7 +367,9 @@ export default class Event {
             });
           }
 
-          LoggerClass.logGridOldNew(before, gameData.data.manche, fileLogger);
+          if (fileLogger) {
+            LoggerClass.logGridOldNew(before, gameData.data.manche, fileLogger);
+          }
         }
 
         if (action === "changeStartingPlayer") {
@@ -382,16 +399,17 @@ export default class Event {
       GameManager.engine(gameData, socket, { event: "afterEvent" });
     }
 
-
     // SAVE LOG DIFF DETAILLE
     // mettre cette ligne avant l'execution des withValueEvent
-    // sinon dans l'ordre d'execution on verra le withValue 
+    // sinon dans l'ordre d'execution on verra le withValue
     // avant l'execution de l'event principal et pas apres
-    if (gameData.data.isTest){
+    if (gameData.data.isTest) {
       gameData.data.testLogs.push(actionObject.getActionEventForTest());
     }
-    if (event.loadMessage){ gameData.data.logs.push(event.loadMessage); socket.to(gameData.roomId).emit("updateGameDataLogs", event.loadMessage);}
- 
+    if (event.loadMessage) {
+      gameData.data.logs.push(event.loadMessage);
+      socket.to(gameData.roomId).emit("updateGameDataLogs", event.loadMessage);
+    }
 
     // to execute if event doesnot wait answer from player
     if (event.event.withValue && action !== "askPlayer") {
@@ -410,7 +428,7 @@ export default class Event {
         });
       }
     }
- }
+  }
 
   /**
    * Résout la cible (destinataire) d'un event en évaluant la clause `for`.
@@ -441,7 +459,10 @@ export default class Event {
             const msg = `Event ${event.id} Want to check 'playerBoucle' but does not provide any index number in iteration`;
             eventLogger.error(msg);
             LoggerClass.logFileLocalisation();
-            errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+            errorStack.addError(
+              msg,
+              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+            );
           }
         }
         return [
@@ -498,7 +519,10 @@ export default class Event {
             const msg = `Event ${event.id} Want to check 'playerBoucle' but does not provide any index number in iteration`;
             eventLogger.error(msg);
             LoggerClass.logFileLocalisation();
-            errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+            errorStack.addError(
+              msg,
+              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+            );
           }
         }
         return [
@@ -620,7 +644,7 @@ export default class Event {
     //},
 
     for (let key of Object.keys(shortWithValueEvent)) {
-      if (key != "id" && key !="componentId") {
+      if (key != "id" && key != "componentId") {
         let newParam = Parser.translateInnerExpression(
           shortWithValueEvent[key],
           gameData,
@@ -657,7 +681,10 @@ export default class Event {
         "you data object must have with value array " + withValueEvent.id;
       eventLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
 
       return null;
     }
@@ -669,12 +696,15 @@ export default class Event {
       const msg = "Event not found! ID=" + withValueEvent.id;
       actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
       return null;
     }
 
     console.log("params :>> ", params);
 
-    Event.ExecuteEvent(event, socket, gameData, { ...params },"withValue");
+    Event.ExecuteEvent(event, socket, gameData, { ...params }, "withValue");
   }
 }

@@ -153,7 +153,7 @@ export default class PlayerManager {
       personalHandDeck: { type: "cardList", value: [] }, //card id
       personalHandDiscard: { type: "cardList", value: [] }, // card id
       hasPlayed: { type: "boolean", value: false },
-      haswin: { type: "boolean", value: false },
+      haswin: { type: "boolean", value: null },
       hasloose: { type: "boolean", value: false },
       actions: { type: "array", value: [] },
       roles: { type: "array", value: [] },

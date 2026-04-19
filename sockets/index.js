@@ -13,8 +13,10 @@ export default function registerSocket(io) {
     GameSocket.listen(io, socket);
     errorStack.show();
 
-    socket.on("disconnect", function () {
+    socket.on("disconnect",  (reason) => {
+    console.log(`Socket ${socket.id} disconnected. Reason: ${reason}`)
         console.log("disconnect");
+ 
         roomManager.disconnectPlayer(socket)
     });
   });

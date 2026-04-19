@@ -6,6 +6,7 @@ import AppError from "../error/AppError.js";
 import { MessagerieManager } from "./MessagerieManager.js";
 import { io } from "../../server.js";
 import { TypeManager } from "./helper/TypeManager.js";
+import GameManager from "./GameManager.js";
 
 const roomLogger = Logger("RoomManager");
 
@@ -125,7 +126,7 @@ class RoomManager {
         isTest: isTest,
         messages: [],
         logs: [],
-        testLogs: [], 
+        testLogs: [],
         state: { type: "string", value: "waitingPlayers" },
         boardCard: {
           type: "cardList",
@@ -136,6 +137,10 @@ class RoomManager {
           value: false,
         },
         winners: {
+          type: "playerList",
+          value: [],
+        },
+        losers: {
           type: "playerList",
           value: [],
         },
@@ -235,7 +240,7 @@ class RoomManager {
       gameData.data.state.value !== "waitingPlayers" &&
       gameData.data.isTest
     ) {
-       // TODO : Faire rejoindre en spectateur si possible
+      // TODO : Faire rejoindre en spectateur si possible
     }
 
     if (gameData) {
@@ -297,7 +302,8 @@ class RoomManager {
 
     gameData.data.messages = [];
     gameData.data.logs = [];
-    gameData.data.state.value = "waitingPlayers";
+    gameData.data.state.value = "inProgress";
+
     gameData.data.boardCard.value = [];
     gameData.data.allPlayersHasPlayed.value = false;
     gameData.data.winners.value = [];
@@ -311,7 +317,11 @@ class RoomManager {
     ).map((key) => parseInt(key))),
       (gameData.data.discardDeck.value = []));
 
-    this.sendGameChangeSignal(gameData.roomId);
+    if (gameData.data.isTest) {
+      GameManager.engine(gameData, socket, { event: "startGame" });
+    } else {
+      this.sendGameChangeSignal(gameData.roomId);
+    }
   }
 
   sendGameChangeSignal(roomID) {
@@ -328,12 +338,24 @@ class RoomManager {
   }
 
   disconnectPlayer(socket) {
+    console.log("TRY TO DISCONNECT PLAYER");
     const roomId = socket.data.roomId;
     const pseudo = socket.data.pseudo;
     const playerId = socket.data.playerId;
+    console.log(roomId, pseudo, playerId);
 
-    if (!roomId) return;
-
+    if (!roomId) {
+      roomLogger.error("Cannot disconnect player, no roomId found on socket");
+      return;
+    }
+    if (!pseudo) {
+      roomLogger.error("Cannot disconnect player, no pseudo found on socket");
+      return;
+    }
+    if (!playerId) {
+      roomLogger.error("Cannot disconnect player, no playerId found on socket");
+      return;
+    }
     const gameData = this.getRoom(roomId);
     if (gameData) {
       //remove player

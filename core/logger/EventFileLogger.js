@@ -1,8 +1,6 @@
 import fs from "fs";
 import path from "path";
-import EventExecutionCounter from "./EventExecutionCounter.js";
-import { LoggerClass } from "./logger.js";
-import { TypeManager } from "../services/helper/TypeManager.js";
+import EventExecutionCounter from "./EventExecutionCounter.js"; 
 const LOG_DIR = "./logs";
 
 export default class EventFileLogger {

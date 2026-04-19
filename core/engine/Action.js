@@ -61,13 +61,14 @@ export default class Action {
     if (!TypeManager.isDefined(this.fileLogger)) {
       const msg = "fileLogger is null in Action constructor";
       console.error(msg);
-      LoggerClass.logFileLocalisation();
+      /*  LoggerClass.logFileLocalisation();
       try {
         errorStack.addError(
           msg,
           LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
         );
       } catch (e) {}
+       */
     }
   }
 
@@ -142,7 +143,9 @@ export default class Action {
         this.event["id"];
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      this.fileLogger.error(new Error(msg), "actions.js → shuffle()");
+      if (this.fileLogger) {
+        this.fileLogger.error(new Error(msg), "actions.js → shuffle()");
+      }
       errorStack.addError(
         msg,
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
@@ -158,7 +161,9 @@ export default class Action {
         this.event["id"];
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      this.fileLogger.error(new Error(msg), "actions.js → shuffle()");
+      if (this.fileLogger) {
+        this.fileLogger.error(new Error(msg), "actions.js → shuffle()");
+      }
       errorStack.addError(
         msg,
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
@@ -167,17 +172,22 @@ export default class Action {
     }
 
     // Effectue le mélange
-    this.fileLogger.log(
-      `🔀 Mélange de la collection du destinataire dans l'événement ID=${this.event["id"]}`,
-    );
+    if (this.fileLogger) {
+      this.fileLogger.log(
+        `🔀 Mélange de la collection du destinataire dans l'événement ID=${this.event["id"]}`,
+      );
+    }
+
     let before = structuredClone(this.destinataire);
     ArrayManager.shuffle(this.destinataire.value);
-    LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
+    if (this.fileLogger) {
+      LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
+      this.fileLogger.log("✅ Mélange effectué.");
+    }
     this.actionLogger.info("Effectué");
-    this.fileLogger.log("✅ Mélange effectué.");
     if (this.gameData.data.isTest) {
       this.actionEventForTest.diffs.push({
-        id:"jzbfebdxk54165zf",
+        id: "jzbfebdxk54165zf",
         key: this.event.event.for,
         diff: ObjectManager.getObjectDiff(before, this.destinataire),
         type: before.type,
@@ -197,47 +207,52 @@ export default class Action {
         this.event["id"];
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      this.fileLogger.error(
-        new Error(msg),
-        "actions.js → changeStartingPlayer()",
-      );
+      if (this.fileLogger) {
+        this.fileLogger.error(
+          new Error(msg),
+          "actions.js → changeStartingPlayer()",
+        );
+      }
       errorStack.addError(
         msg,
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
     }
-    this.fileLogger.log(
-      `🔄 Changement du joueur de départ dans l'événement ID=${this.event["id"]}`,
-    );
+    if (this.fileLogger) {
+      this.fileLogger.log(
+        `🔄 Changement du joueur de départ dans l'événement ID=${this.event["id"]}`,
+      );
+    }
     let before = this.gameData.data.players[0];
     let beforePPlayers = structuredClone(this.gameData.data.players);
     PlayerManager.changePlayerOrder(this.value, this.gameData);
-
-    this.fileLogger.log(
-      `✅ Le joueur de départ a été changé de ${before.name} à ${this.gameData.data.players[0].name}.`,
-    );
-    LoggerClass.logGridOldNew(
-      before,
-      this.gameData.data.players[0],
-      this.fileLogger,
-    );
-    this.fileLogger.log("Players :");
-    LoggerClass.logGridOldNew(
-      beforePPlayers,
-      this.gameData.data.players,
-      this.fileLogger,
-    );
+    if (this.fileLogger) {
+      this.fileLogger.log(
+        `✅ Le joueur de départ a été changé de ${before.name} à ${this.gameData.data.players[0].name}.`,
+      );
+      LoggerClass.logGridOldNew(
+        before,
+        this.gameData.data.players[0],
+        this.fileLogger,
+      );
+      this.fileLogger.log("Players :");
+      LoggerClass.logGridOldNew(
+        beforePPlayers,
+        this.gameData.data.players,
+        this.fileLogger,
+      );
+    }
     // SAVE ACTION LOG FOR TEST
     if (this.gameData.data.isTest) {
       this.actionEventForTest.diffs.push({
-         id:"jzbbbu5454165zf",
+        id: "jzbbbu5454165zf",
         key: "Starting Player",
         type: "player",
         before: before.pseudo,
         after: structuredClone(this.gameData.data.players[0].pseudo),
       });
       this.actionEventForTest.diffs.push({
-         id:"hzefuf548fzefez",
+        id: "hzefuf548fzefez",
         key: "Player order",
         type: "array",
         before: beforePPlayers.map((p) => p.pseudo),
@@ -245,7 +260,9 @@ export default class Action {
       });
     }
     this.actionLogger.info("Effectué");
-    this.fileLogger.log("✅ Changement de joueur effectué.");
+    if (this.fileLogger) {
+      this.fileLogger.log("✅ Changement de joueur effectué.");
+    }
   }
   skipPlayerTour() {
     if (!TypeManager.isDefined(this.destinataire)) {
@@ -256,28 +273,40 @@ export default class Action {
         this.event["id"];
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      this.fileLogger.error(new Error(msg), "actions.js → skipPlayerTour()");
-
+      if (this.fileLogger) {
+        this.fileLogger.error(new Error(msg), "actions.js → skipPlayerTour()");
+      }
       errorStack.addError(
         msg,
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
     }
-    this.fileLogger.log(
-      `⏭️ Saut du tour du joueur dans l'événement ID=${this.event["id"]}`,
-    );
+    if (this.fileLogger) {
+      this.fileLogger.log(
+        `⏭️ Saut du tour du joueur dans l'événement ID=${this.event["id"]}`,
+      );
+    }
     let before = structuredClone(this.destinataire);
-    this.destinataire["attachedEventForTour"]["value"].push("skipPlayerTour");
+    if (
+      this.destinataire &&
+      this.destinataire["attachedEventForTour"] &&
+      Array.isArray(this.destinataire["attachedEventForTour"]["value"])
+    ) {
+      this.destinataire["attachedEventForTour"]["value"].push("skipPlayerTour");
+    }
     PlayerManager.updatePlayerObject(this.destinataire, this.gameData);
-    LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
-
-    this.actioplayerListnLogger.info("Effectué");
-    this.fileLogger.log("✅ Saut du tour effectué.");
+    if (this.fileLogger) {
+      LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
+      this.fileLogger.log("✅ Saut du tour effectué.");
+    }
+    this.actionLogger.info("Effectué");
   }
 
   updateGlobalValue() {
-    this.fileLogger.log("Action element :");
-    this.fileLogger.log(LoggerClass.pretty(this.getThisObject()));
+    if (this.fileLogger) {
+      this.fileLogger.log("Action element :");
+      this.fileLogger.log(LoggerClass.pretty(this.getThisObject()));
+    }
 
     // Error if value undefined
     if (!TypeManager.isDefined(this.value)) {
@@ -285,8 +314,12 @@ export default class Action {
         "cannot update gloabal value without value. Event id=" + this.event.id;
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      this.fileLogger.error(new Error(msg), "actions.js → updateGlobalValue()");
-
+      if (this.fileLogger) {
+        this.fileLogger.error(
+          new Error(msg),
+          "actions.js → updateGlobalValue()",
+        );
+      }
       errorStack.addError(msg, LoggerClass.logFileLocalisation());
       return;
     }
@@ -297,17 +330,23 @@ export default class Action {
         this.event.id;
       this.actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      this.fileLogger.error(new Error(msg), "actions.js → updateGlobalValue()");
+      if (this.fileLogger) {
+        this.fileLogger.error(
+          new Error(msg),
+          "actions.js → updateGlobalValue()",
+        );
+      }
       errorStack.addError(msg, LoggerClass.logFileLocalisation());
       return;
     }
-
-    this.fileLogger.log(
-      `🔄 Mise à jour de la valeur globale dans l'événement ID=${this.event["id"]}`,
-    );
-    this.fileLogger.log("Get Value to replace -> " + this.value);
-    this.fileLogger.log("Destinataire avant modification-> ");
-    this.fileLogger.log(LoggerClass.pretty(this.destinataire));
+    if (this.fileLogger) {
+      this.fileLogger.log(
+        `🔄 Mise à jour de la valeur globale dans l'événement ID=${this.event["id"]}`,
+      );
+      this.fileLogger.log("Get Value to replace -> " + this.value);
+      this.fileLogger.log("Destinataire avant modification-> ");
+      this.fileLogger.log(LoggerClass.pretty(this.destinataire));
+    }
     let before = structuredClone(this.gameData.data);
     let destinataireBefore = structuredClone(this.destinataire);
     let v = Parser.translateInnerExpression(this.value, this.gameData, {
@@ -322,7 +361,7 @@ export default class Action {
     }
     if (this.gameData.data.isTest) {
       this.actionEventForTest.diffs.push({
-        id:"vnjbu45561zef",
+        id: "vnjbu45561zef",
         key: this.event.event.for,
         type: "number",
         before: structuredClone(destinataireBefore.value),
@@ -334,16 +373,19 @@ export default class Action {
       this.gameData,
       this.destinataireListObject,
     );
-
-    LoggerClass.logGridOldNew(before, this.gameData.data, this.fileLogger);
+    if (this.fileLogger) {
+      LoggerClass.logGridOldNew(before, this.gameData.data, this.fileLogger);
+      this.fileLogger.log("✅ changement de valeur effectué.");
+    }
     if (this.logs.globalEventLog) this.actionLogger.info("Effectué");
-    this.fileLogger.log("✅ changement de valeur effectué.");
   }
 
   removeAllAtachedEventsForTour() {
-    this.fileLogger.log(
-      `🗑️ Suppression de tous les événements attachés pour le tour du joueur dans l'événement ID=${this.event["id"]}`,
-    );
+    if (this.fileLogger) {
+      this.fileLogger.log(
+        `🗑️ Suppression de tous les événements attachés pour le tour du joueur dans l'événement ID=${this.event["id"]}`,
+      );
+    }
     let before = structuredClone(this.destinataire);
     if (
       this.destinataire["attachedEventForTour"] &&
@@ -352,17 +394,19 @@ export default class Action {
       this.destinataire["attachedEventForTour"]["value"] = [];
       PlayerManager.updatePlayerObject(this.destinataire, this.gameData);
 
-      this.fileLogger.log(
-        `✅ Tous les événements attachés pour le tour ont été supprimés du joueur dans l'événement ID=${this.event["id"]}.`,
-      );
-      LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
+      if (this.fileLogger) {
+        this.fileLogger.log(
+          `✅ Tous les événements attachés pour le tour ont été supprimés du joueur dans l'événement ID=${this.event["id"]}.`,
+        );
+        LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
 
-      this.fileLogger.log("Effectué");
+        this.fileLogger.log("Effectué");
+      }
       // SAVE ACTION LOG FOR TEST
       if (this.gameData.data.isTest) {
         this.actionEventForTest.diffs.push({
           key: this.destinataire.pseudo,
-          id:"efhufe4564efz",
+          id: "efhufe4564efz",
           type: "array",
           before: structuredClone(before.attachedEventForTour.value),
           after: structuredClone(this.destinataire.attachedEventForTour.value),
@@ -372,33 +416,35 @@ export default class Action {
   }
 
   giveElementsTo() {
-    LoggerClass.logGridFromObject(
-      {
-        Sender: typeof this.sender,
-        "Sender List Object": typeof this.senderListObject,
-        Destinataire: typeof this.destinataire,
-        "Destinataire List Object": typeof this.destinataireListObject,
-        "Give Elements": typeof this.giveElements,
-        Socket: typeof this.socket,
-        "Game Data": typeof this.gameData,
-        Params: typeof this.params,
-        Logs: typeof this.logs,
-        Index: typeof this.index,
-      },
-      "🔄 GiveElementTo PARAMS",
-      this.fileLogger,
-    );
+    if (this.fileLogger) {
+      LoggerClass.logGridFromObject(
+        {
+          Sender: typeof this.sender,
+          "Sender List Object": typeof this.senderListObject,
+          Destinataire: typeof this.destinataire,
+          "Destinataire List Object": typeof this.destinataireListObject,
+          "Give Elements": typeof this.giveElements,
+          Socket: typeof this.socket,
+          "Game Data": typeof this.gameData,
+          Params: typeof this.params,
+          Logs: typeof this.logs,
+          Index: typeof this.index,
+        },
+        "🔄 GiveElementTo PARAMS",
+        this.fileLogger,
+      );
+
+      LoggerClass.logGridFromObject(
+        {
+          Destinataire: this.destinataire,
+          Sender: this.sender,
+        },
+        "AVANT GiveElementTo ",
+        this.fileLogger,
+      );
+    }
 
     let beforeGameData = structuredClone(this.gameData.data);
-
-    LoggerClass.logGridFromObject(
-      {
-        Destinataire: this.destinataire,
-        Sender: this.sender,
-      },
-      "AVANT GiveElementTo ",
-      this.fileLogger,
-    );
 
     // PARCOURIR TOUS LES ELEMENTS A DONNER
     for (let key of Object.keys(this.giveElements)) {
@@ -409,8 +455,10 @@ export default class Action {
         this.gameData,
         null,
       ); //  {gain#1} -> ['gain','1']
-      this.fileLogger.log("keyToTransform :");
-      this.fileLogger.log(LoggerClass.pretty(keyToTransform));
+      if (this.fileLogger) {
+        this.fileLogger.log("keyToTransform :");
+        this.fileLogger.log(LoggerClass.pretty(keyToTransform));
+      }
 
       //  INITIALIZED SENDER =======================
       let senderObject = null;
@@ -443,14 +491,16 @@ export default class Action {
       const destinataireObjectSave = structuredClone(destinataireObject);
 
       // LOG ====================================
-      LoggerClass.logGridFromObject(
-        {
-          "Destinataire object": destinataireObject,
-          "Sender Object": senderObject,
-        },
-        "APPLICATION DES CLES ",
-        this.fileLogger,
-      );
+      if (this.fileLogger) {
+        LoggerClass.logGridFromObject(
+          {
+            "Destinataire object": destinataireObject,
+            "Sender Object": senderObject,
+          },
+          "APPLICATION DES CLES ",
+          this.fileLogger,
+        );
+      }
 
       // START MANIP ==========================================
 
@@ -463,8 +513,10 @@ export default class Action {
           location: this.fileLogger,
         },
       );
-      this.fileLogger.log("sum");
-      this.fileLogger.log(LoggerClass.pretty(sum));
+      if (this.fileLogger) {
+        this.fileLogger.log("sum");
+        this.fileLogger.log(LoggerClass.pretty(sum));
+      }
 
       // IF WE WANT TO GIVE ALL
       const exceptions = ["*"];
@@ -477,10 +529,12 @@ export default class Action {
               this.event.id;
             this.actionLogger.error(msg);
             LoggerClass.logFileLocalisation();
-            this.fileLogger.error(
-              new Error(msg),
-              "actions.js → giveElementsTo()",
-            );
+            if (this.fileLogger) {
+              this.fileLogger.error(
+                new Error(msg),
+                "actions.js → giveElementsTo()",
+              );
+            }
 
             errorStack.addError(
               msg,
@@ -498,14 +552,16 @@ export default class Action {
               this.destinataire +
               " because sender value is not array got :" +
               senderObject;
-            this.fileLogger.log(LoggerClass.pretty(senderObject));
+            if (this.fileLogger) {
+              this.fileLogger.log(LoggerClass.pretty(senderObject));
+
+              this.fileLogger.error(
+                new Error(msg),
+                "actions.js → giveElementsTo()",
+              );
+            }
             this.actionLogger.error(msg);
             LoggerClass.logFileLocalisation();
-            this.fileLogger.error(
-              new Error(msg),
-              "actions.js → giveElementsTo()",
-            );
-
             errorStack.addError(
               msg,
               LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
@@ -517,36 +573,42 @@ export default class Action {
           if (key === "{cards}") {
             // COPY CARDS OF SENDER
             let newSenderObjectValue = structuredClone(senderObject.value);
-            LoggerClass.logGridFromObject(
-              {
-                "New Sender Object Value before": newSenderObjectValue,
-                "senderObject value ": senderObject.value,
-              },
-              "COPY ALL CARDS - BEFORE LOOP",
-              this.fileLogger,
-            );
+            if (this.fileLogger) {
+              LoggerClass.logGridFromObject(
+                {
+                  "New Sender Object Value before": newSenderObjectValue,
+                  "senderObject value ": senderObject.value,
+                },
+                "COPY ALL CARDS - BEFORE LOOP",
+                this.fileLogger,
+              );
+            }
             // GIVE ALL CARD
             for (let elt of senderObject.value) {
-              if (senderObject.value.length === 0) {
+              if (senderObject.value.length === 0 && this.fileLogger) {
                 this.fileLogger.log("Sender value empty  ");
                 continue;
               }
               // Verify That card exist in gameData
               if (CardManager.getCard(this.gameData, elt)) {
-                this.fileLogger.log(
-                  "Give card id  " + elt + " to destinataire",
-                );
+                if (this.fileLogger) {
+                  this.fileLogger.log(
+                    "Give card id  " + elt + " to destinataire",
+                  );
+                }
                 destinataireObject.value.push(elt);
                 const index = newSenderObjectValue.indexOf(elt);
                 if (index !== -1) {
                   newSenderObjectValue.splice(index, 1);
                 } else {
-                  this.fileLogger.log(
-                    "Card id " + elt + " not found in newSenderObjectValue ",
-                  );
+                  if (this.fileLogger) {
+                    this.fileLogger.log(
+                      "Card id " + elt + " not found in newSenderObjectValue ",
+                    );
+                  }
                 }
               } else {
-                if (this.logs.giveElementsLog) {
+                if (this.logs.giveElementsLog && this.fileLogger) {
                   this.fileLogger.error(
                     "l'element n'est pas une carte got : " + elt,
                   );
@@ -567,10 +629,13 @@ export default class Action {
             }
             if (this.gameData.data.isTest) {
               this.actionEventForTest.diffs.push({
-                key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
+                key: PlayerManager.isPlayerType(
+                  this.destinataire,
+                  this.gameData,
+                )
                   ? this.destinataire.pseudo
                   : this.event.event.for,
-                id:"ezfu54528585",
+                id: "ezfu54528585",
                 type: senderObject.type,
                 before: structuredClone(destinataireObjectSave.value),
                 after: structuredClone(destinataireObject.value),
@@ -590,7 +655,7 @@ export default class Action {
               this.gameData,
               null,
             );
-            if (this.logs.giveElementsLog) {
+            if (this.logs.giveElementsLog && this.fileLogger) {
               this.fileLogger.log("give to destinataire object all available ");
               this.fileLogger.log("totalAvailable: ", totalAvailable);
               this.fileLogger.log(
@@ -609,7 +674,7 @@ export default class Action {
             if (this.gameData.data.isTest) {
               this.actionEventForTest.diffs.push({
                 key: this.sender.pseudo,
-                id:"eflokort5123",
+                id: "eflokort5123",
                 type: "number",
                 before: structuredClone(senderObject.value),
                 after: 0,
@@ -634,11 +699,12 @@ export default class Action {
             key;
           this.actionLogger.error(msg);
           LoggerClass.logFileLocalisation();
-          this.fileLogger.error(
-            new Error(msg),
-            "actions.js → giveElementsTo()",
-          );
-
+          if (this.fileLogger) {
+            this.fileLogger.error(
+              new Error(msg),
+              "actions.js → giveElementsTo()",
+            );
+          }
           errorStack.addError(
             msg,
             LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
@@ -646,14 +712,18 @@ export default class Action {
 
           return;
         }
-        this.fileLogger.log("Sum : " + sum);
-        if (senderObject) {
-          this.fileLogger.log(
-            "type of senderobject value " +
-              TypeManager.getType(senderObject.value) +
-              " reel type " +
-              typeof senderObject.value,
-          );
+
+        // Debut des logs de fin d'action
+        if (this.fileLogger) {
+          this.fileLogger.log("Sum : " + sum);
+          if (senderObject) {
+            this.fileLogger.log(
+              "type of senderobject value " +
+                TypeManager.getType(senderObject.value) +
+                " reel type " +
+                typeof senderObject.value,
+            );
+          }
         }
 
         // IF THERE IS SENDER
@@ -708,29 +778,37 @@ export default class Action {
         // If WE GIVE FIXE NUMBER OF CARD
         if (key === "{cards}") {
           let newSenderObjectValue = structuredClone(senderObject.value);
-          LoggerClass.logGridFromObject(
-            {
-              "New Sender Object Value before": newSenderObjectValue,
-              "senderObject value ": senderObject.value,
-            },
-            "COPY ALL CARDS - BEFORE LOOP",
-            this.fileLogger,
-          );
+          if (this.fileLogger) {
+            LoggerClass.logGridFromObject(
+              {
+                "New Sender Object Value before": newSenderObjectValue,
+                "senderObject value ": senderObject.value,
+              },
+              "COPY ALL CARDS - BEFORE LOOP",
+              this.fileLogger,
+            );
+          }
           for (let n = 0; n < sum; n++) {
             // Sender donne des cartes une par une à Destinataire
             if (!senderObject) {
-              this.fileLogger.log("No sender,   ");
+              if (this.fileLogger) {
+                this.fileLogger.log("No sender,   ");
+              }
               continue;
             }
             if (senderObject.value.length === 0) {
-              this.fileLogger.log("Sender value empty  ");
+              if (this.fileLogger) {
+                this.fileLogger.log("Sender value empty  ");
+              }
               continue;
             }
 
             if (senderObject.value[n]) {
-              this.fileLogger.log(
-                "Give card id  " + senderObject.value[n] + " to destinataire",
-              );
+              if (this.fileLogger) {
+                this.fileLogger.log(
+                  "Give card id  " + senderObject.value[n] + " to destinataire",
+                );
+              }
 
               destinataireObject.value.push(senderObject.value[n]);
               newSenderObjectValue.splice(n, 1);
@@ -746,7 +824,7 @@ export default class Action {
                 ? this.sender.pseudo
                 : this.event.event.from,
               type: senderObject.type,
-              message:"Give " + sum + " cards to destinataire",
+              message: "Give " + sum + " cards to destinataire",
               id: "ppkzeort5123",
               before: structuredClone(senderObjectSave.value),
               after: structuredClone(newSenderObjectValue),
@@ -758,13 +836,15 @@ export default class Action {
                 ? this.destinataire.pseudo
                 : this.event.event.for,
               type: destinataireObject.type,
-              message:"Receive " + sum + " cards from sender",
+              message: "Receive " + sum + " cards from sender",
               id: "435545grerg",
               before: structuredClone(destinataireObjectSave.value),
               after: structuredClone(destinataireObject.value),
             });
           }
-        } else {
+        }
+        //END : If WE GIVE FIXE NUMBER OF CARD
+        else {
           destinataireObject.value += sum;
           if (this.gameData.data.isTest) {
             this.actionEventForTest.diffs.push({
@@ -772,13 +852,13 @@ export default class Action {
                 ? this.destinataire.pseudo
                 : this.event.event.for,
               type: "number",
-              id:"e5443655155",
+              id: "e5443655155",
               before: structuredClone(destinataireObjectSave.value),
               after: structuredClone(destinataireObject.value),
             });
           }
         }
-      }
+      }// END  IF WE WANT TO GIVE A SPECIFIC QUANTITY
 
       // SAVER
       PlayerManager.updatePlayerObject(
@@ -792,48 +872,51 @@ export default class Action {
         this.destinataireListObject,
       );
 
-      LoggerClass.logGridFromObject(
-        {
-          "Destinataire Liste": this.destinataireListObject,
-          "Destinataire Object": destinataireObject,
-          Destinataire: this.destinataire,
-        },
-        "DESTINATAIRE AFTER GIVE ELEMENT",
-        this.fileLogger,
-      );
+      // logs de resultats
+      if (this.fileLogger) {
+        LoggerClass.logGridFromObject(
+          {
+            "Destinataire Liste": this.destinataireListObject,
+            "Destinataire Object": destinataireObject,
+            Destinataire: this.destinataire,
+          },
+          "DESTINATAIRE AFTER GIVE ELEMENT",
+          this.fileLogger,
+        );
 
-      LoggerClass.logGridFromObject(
-        {
-          "Sender Liste": this.SenderListObject,
-          "Sender Object": senderObject,
-          Sender: this.sender,
-        },
-        "SENDER AFTER GIVE ELEMENT",
-        this.fileLogger,
-      );
+        LoggerClass.logGridFromObject(
+          {
+            "Sender Liste": this.SenderListObject,
+            "Sender Object": senderObject,
+            Sender: this.sender,
+          },
+          "SENDER AFTER GIVE ELEMENT",
+          this.fileLogger,
+        );
 
-      this.fileLogger.log("Data ");
-      this.fileLogger.log(LoggerClass.pretty(this.gameData.data.players));
+        this.fileLogger.log("Data ");
+        this.fileLogger.log(LoggerClass.pretty(this.gameData.data.players));
 
-      if (this.index) {
-        this.fileLogger.log("Resultat des modifications ");
-        for (let player of this.gameData.data.players) {
-          this.fileLogger.log(LoggerClass.pretty(player));
-          this.actionLogger.info("Effectué x" + this.index);
-          this.fileLogger.log(
-            "✅ GiveElementsTo effectué x" + this.index + ".",
-          );
+        if (this.index) {
+          this.fileLogger.log("Resultat des modifications ");
+          for (let player of this.gameData.data.players) {
+            this.fileLogger.log(LoggerClass.pretty(player));
+            this.actionLogger.info("Effectué x" + this.index);
+            this.fileLogger.log(
+              "✅ GiveElementsTo effectué x" + this.index + ".",
+            );
+          }
         }
-      }
 
-      LoggerClass.logGridOldNew(
-        beforeGameData,
-        this.gameData.data,
-        this.fileLogger,
-      );
+        LoggerClass.logGridOldNew(
+          beforeGameData,
+          this.gameData.data,
+          this.fileLogger,
+        );
 
-      this.actionLogger.info("Effectué ");
-      this.fileLogger.log("✅ GiveElementsTo effectué.");
+        this.actionLogger.info("Effectué ");
+        this.fileLogger.log("✅ GiveElementsTo effectué.");
+      }// fin logs de resultats
     }
   }
 }
