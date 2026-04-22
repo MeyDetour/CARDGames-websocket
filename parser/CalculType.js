@@ -14,7 +14,7 @@ export default class CalculType extends TypeInterface {
    */
   static splitLogical(str, gameData, params) {
     str = CalculType.removeTag(str);
-    let comparators = ["+", "*", "-"];
+    let comparators = ["+", "*", "-","/","%"];
     let string = "";
     let finalList = [];
     for (let i = 0; i < str.length; i++) {
@@ -69,5 +69,7 @@ export default class CalculType extends TypeInterface {
     if (comparateur === "-") return a - b;
     if (comparateur === "+") return a + b;
     if (comparateur === "*") return a * b;
+    if (comparateur === "/") return a / b;
+    if (comparateur === "%") return a % b;
   }
 }
