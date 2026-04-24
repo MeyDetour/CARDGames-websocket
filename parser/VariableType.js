@@ -21,7 +21,7 @@ export default class VariableType extends TypeInterface {
     if (!params) {
       params = {};
     }
-    if (params.fileLogger) {
+    if ( params && params.fileLogger) {
       params.fileLogger.log(Parser.getDepthIndentation(params.depth) +
         `VariableType.splitLogical called with expression: ${str}`
       );
@@ -118,15 +118,16 @@ export default class VariableType extends TypeInterface {
   }
 
   static splitLogicalList(list, gameData, params) {
-    if (params.fileLogger) {
+    if ( params && params.fileLogger) {
       params.fileLogger.log( Parser.getDepthIndentation(params.depth) +"Split logical list for : " + JSON.stringify(list));
     }
 
     let value = null;
+    if (!Array.isArray(list))return null
     for (let i = 0; i < list.length; i++) {
       let elt = list[i];
 
-      if (params.fileLogger) {
+      if (params && params.fileLogger) {
         params.fileLogger.log( Parser.getDepthIndentation(params.depth) +
           `VariableType.splitLogicalList processing element: ${elt}`
         );
@@ -189,7 +190,7 @@ export default class VariableType extends TypeInterface {
         } else {
           value = gameData.data[elt];
 
-          if (params.fileLogger) {
+          if ( params && params.fileLogger) {
             params.fileLogger.log( Parser.getDepthIndentation(params.depth) +
               `Accessed gameData property '${elt}': ${JSON.stringify(value)}`
             );
@@ -214,7 +215,7 @@ export default class VariableType extends TypeInterface {
           if (!TypeManager.isDefined(value)) {
             value = params[elt];
 
-            if (params.fileLogger) {
+            if ( params && params.fileLogger) {
               params.fileLogger.log( Parser.getDepthIndentation(params.depth) +
                 `Accessed params property '${elt}': ${JSON.stringify(value)}`
               );
@@ -223,7 +224,7 @@ export default class VariableType extends TypeInterface {
             if (!TypeManager.isDefined(value)) {
               const msg = `${elt} property is null in params and data in VariableType.splitLogicalList`;
 
-              if (params.fileLogger) {
+              if ( params && params.fileLogger) {
                 params.fileLogger.error(msg);
               }
 
@@ -271,7 +272,7 @@ export default class VariableType extends TypeInterface {
       }
     }
     
-    if (params.fileLogger) {
+    if ( params && params.fileLogger) {
       params.fileLogger.log( Parser.getDepthIndentation(params.depth) +`VariableType.splitLogicalList final value: ${typeof value}`);
        params.fileLogger.log( Parser.getDepthIndentation(params.depth) +JSON.stringify(value))
     } 

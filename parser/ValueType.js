@@ -16,7 +16,7 @@ export default class ValueType extends TypeInterface{
      */
     static splitLogical(str,gameData,params) {
         let result = this.removeTag(str);
-        if (params.fileLogger) {
+        if (params && params.fileLogger) {
             params.fileLogger.log(Parser.getDepthIndentation(params.depth) +
                 `ValueType.splitLogical called with expression: ${str}`
             );

@@ -1,9 +1,19 @@
 import ComparaisonType from "../../parser/ComparaisonType";
-
-describe("ComparaisonType", () => {
-  
+ 
  
 describe("Array comparaison - Edge Cases", () => {
+   beforeEach(() => {
+    mockGameData = {
+      data: {
+        currentPlayerPosition: { value: 1 },
+        players: [
+          { id: "p1", position: 1, name: "Alice" , hasPlayed : {value : true}},
+          { id: "p2", position: 2, name: "Bob" , hasPlayed : {value : true}},
+          { id: "p3", position: 3, name: "Charlie" , hasPlayed : {value : true}},
+        ],
+      },
+    }; 
+  });
   it("should handle empty arrays", () => { 
     expect(ComparaisonType.resolveLogical([[], "contain", "A"])).toEqual(false);
     expect(ComparaisonType.resolveLogical([["A", "B"], "contain", "a"])).toEqual(false);
@@ -12,7 +22,7 @@ describe("Array comparaison - Edge Cases", () => {
     expect(ComparaisonType.resolveLogical([["Apple", "Banana"], "contain", "Apple"])).toEqual(true);
   });
 
-  it("should be verify if string comparaison in array", () => { 
+  it("should verify if string comparaison in array", () => { 
     expect(ComparaisonType.resolveLogical(["aaAaaa", "contain", "A"])).toEqual(true);
     expect(ComparaisonType.resolveLogical(["aaaaaA", "contain", "A"])).toEqual(true);
     expect(ComparaisonType.resolveLogical(["tructruc", "contain", "truc"])).toEqual(true);
@@ -37,7 +47,7 @@ describe("Array comparaison - Edge Cases", () => {
     expect(ComparaisonType.resolveLogical(["aa", "isInferiorOrEqual", "LL"])).toEqual(false);
 
   }) 
-  it("should handle weird player comparisons", () => {
+  it("should handle weird   comparisons", () => {
     // Comparer un ID de joueur avec un objet vide ou un type erroné
 
     expect(ComparaisonType.resolveLogical([{ name: "Pikachu" }, "isEqualString", "Pikachu"])).toEqual(false);
@@ -58,8 +68,13 @@ describe("Array comparaison - Edge Cases", () => {
   it("should return false for non-existent or misspelled comparators", () => {
     expect(ComparaisonType.resolveLogical([10, "isTheBestTrainer", 10])).toEqual(false);
     expect(ComparaisonType.resolveLogical(["A", "isEqualSring", "A"])).toEqual(false); // Typo intentionnelle
+  }); it("should compare players object", () => {
+    expect(ComparaisonType.resolveLogical([{id:"p1"}, "differentPlayer", {id:"p2"}],mockGameData)).toEqual(true);
+    expect(ComparaisonType.resolveLogical([{id:"p1"}, "differentPlayer", {id:"p1"}],mockGameData)).toEqual(false); 
+    expect(ComparaisonType.resolveLogical([{id:"p1"}, "samePlayer", {id:"p1"}],mockGameData)).toEqual(true);
+    expect(ComparaisonType.resolveLogical([{id:"p1"}, "samePlayer", {id:"p2"}],mockGameData)).toEqual(false);
+
   });
 });
 
-  
-});
+   

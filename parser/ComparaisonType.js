@@ -84,7 +84,7 @@ export default class ComparaisonType extends TypeInterface {
         Parser.getDepthIndentation(params.depth) + `After translation: ${list}`,
       );
     }
-    let result = ComparaisonType.resolveLogical(list);
+    let result = ComparaisonType.resolveLogical(list,gameData);
     if (params.fileLogger) {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) +
@@ -99,7 +99,7 @@ export default class ComparaisonType extends TypeInterface {
    * @param  {List} list list of instructions like ["1","inferior","2"]
    * return : bool
    */
-  static resolveLogical(list) {
+  static resolveLogical(list,gameData) {
     const stringComparators = ["isEqualString"];
     const numberComparators = [
       "isEqualNumber",
@@ -156,15 +156,15 @@ export default class ComparaisonType extends TypeInterface {
       let playerB = list[2];
       if (
         comparateur === "differentPlayer" &&
-        PlayerManager.isPlayerType(playerA) &&
-        PlayerManager.isPlayerType(playerB)
+        PlayerManager.isPlayerType(playerA,gameData) &&
+        PlayerManager.isPlayerType(playerB,gameData)
       ) {
         return playerA.id !== playerB.id;
       }
       if (
         comparateur === "samePlayer" &&
-        PlayerManager.isPlayerType(playerA) &&
-        PlayerManager.isPlayerType(playerB)
+        PlayerManager.isPlayerType(playerA,gameData) &&
+        PlayerManager.isPlayerType(playerB,gameData)
       ) {
         return playerA.id === playerB.id;
       }
