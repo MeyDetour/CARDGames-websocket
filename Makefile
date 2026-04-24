@@ -13,44 +13,58 @@ CLEAR_CMD := clear
 # Variable pour le fichier de démarrage du serveur
 SERVER_FILE := server.js
 
+# Variables pour les tests
+NODE_OPTS := NODE_OPTIONS=--experimental-vm-modules
+JEST := npx jest
+
 .PHONY: all run clean
 
 all: run
-
-# Cible : run
-# Lance le serveur après avoir nettoyé la console
+ 
+# --- SERVEUR ---
 run: clean
 	@echo "--- Lancement du serveur Node.js ---"
 	@$(CLEAR_CMD)
 	@node $(SERVER_FILE)
-	test
+ 
 
+ 
 
-	
-# Cible : test
-# Lance les tests après avoir nettoyé la console
-test: clean
-	@echo "--- Lancement des tests ---"
-	@npm test
+# --- UTILITAIRES ---
 
-
-# Cible : clean
-# Nettoie uniquement la console (sans lancer le serveur)
-clean:
-	@echo "--- Nettoyage de la console ---"
+clean: 
 	@$(CLEAR_CMD)
 
-# Cible : help (optionnel)
-# Affiche les commandes disponibles
-help:
-	@echo "Commandes Make disponibles :"
-	@echo "  make run  : Nettoie la console et lance $(SERVER_FILE) avec Node."
-	@echo "  make clean: Nettoie uniquement la console."
 git-reset:
-	sudo rm -R .git
+	@echo "--- Reset du dépôt Git ---"
+	rm -rf .git
 	git init
 	git remote add origin https://github.com/MeyDetour/CARDGames-websocket.git
 	git add .
 	git commit -m "fix git object error"
-	git push -uf --set-upstream origin master	
+	git push -uf --set-upstream origin master
+ 
+ # --- TESTS ---
 
+# Lance absolument tous les tests du projet
+test-all: clean
+	@echo "--- Lancement de TOUS les tests ---"
+	$(NODE_OPTS) $(JEST) --runInBand
+
+# Règle dynamique : ex: 'make test-Evaluator' cherchera Evaluator.test.js
+test-%: clean
+	@echo "--- Lancement du test spécifique : $* ---"
+	$(NODE_OPTS) $(JEST) $*
+
+# Raccourcis par dossiers
+test-evaluator: clean
+	@echo "--- Tests Evaluator ---"
+	$(NODE_OPTS) $(JEST) evaluator/
+
+test-parser: clean
+	@echo "--- Tests Parser ---"
+	$(NODE_OPTS) $(JEST) parser/
+
+test-services: clean
+	@echo "--- Tests Services ---"
+	$(NODE_OPTS) $(JEST) services/

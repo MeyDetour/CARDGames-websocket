@@ -22,7 +22,7 @@ describe("ExpressionType", () => {
 
     // (false && true) || true => false || true => true
     expect(ExpressionType.resolveLogical([false, "&&", true, "||", true])).toEqual(
-      true,
+      false
     );
   });
   

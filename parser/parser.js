@@ -5,7 +5,6 @@ import VariableType from "./VariableType.js";
 import CalculType from "./CalculType.js";
 import { Logger, LoggerClass } from "../core/logger/logger.js";
 import { errorStack } from "../core/error/ErrorStack.js";
-
 import { TypeManager } from "../core/services/helper/TypeManager.js";
 import ValueType from "./ValueType.js";
 import FunctionFileLogger from "../core/logger/FunctionFileLogger.js";
@@ -113,7 +112,7 @@ export default class Parser {
           `expression étudiée écuté in  ${cLoggerClass.filepath}`,
         );
       }
-
+      str.replace(/\n/g, " ");
       cLoggerClass.log("gameData :>> " + typeof gameData);
       cLoggerClass.log(
         "params :>> " +
@@ -275,14 +274,42 @@ export default class Parser {
   }
 
   static verifyExpressionSyntax(str) {
+    let expression = "";
+    let isInVariable = false;
     let depth = 0;
     for (let i = 0; i < str.length; i++) {
       const c = str[i];
 
-      if (c === "{") depth++;
-      if (c === "(") depth++;
-      if (c === "}") depth--;
-      if (c === ")") depth--;
+      if (c === "{") {
+        depth++;
+        isInVariable = true;
+        continue;
+      }
+      if (c === "(") {
+        depth++;
+        continue;
+      }
+      // si on est a la fin d'une variable on va verifier le contenu
+      if (c === "}") {
+        depth--;
+        // contenu =  aaa#bbb#ccc
+        // si contenu = a#   ou #b  on aura ["a",""] ou ["","b"] et c'est pas bon
+        if (expression.includes("#")) {
+          const parts = expression.split("#"); 
+          if (parts.length < 2 || parts.some((p) => p.trim() === "")) {
+            return false;
+          }
+        }
+        isInVariable = false;
+        continue;
+      }
+      if (c === ")") {
+        depth--;
+        continue;
+      }
+      if (isInVariable) {
+        expression += c;
+      }
     }
     if (depth !== 0) {
       return false;

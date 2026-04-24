@@ -12,6 +12,7 @@ export default class FunctionType extends TypeInterface {
     if (exp.startsWith("len(")) {
       return exp.substring(4, exp.length - 1);
     }
+    return exp;
   }
 
   static splitLogical(str, gameData, params) {
@@ -22,6 +23,7 @@ export default class FunctionType extends TypeInterface {
       );
     }
     if (str.startsWith("getPlayer(")) {
+      // enlever le tag apres avoir verifier dans quel if renvoyer l'expression, ne pas fusionner avec les autres
       str = FunctionType.removeTag(str);
       let value = Parser.translateInnerExpression(str, gameData, {
         ...params,
@@ -43,6 +45,7 @@ export default class FunctionType extends TypeInterface {
       return player;
     }
     if (str.startsWith("len(")) {
+      // enlever le tag apres avoir verifier dans quel if renvoyer l'expression, ne pas fusionner avec les autres
       str = FunctionType.removeTag(str);
       let value = Parser.translateInnerExpression(str, gameData, {
         ...params,

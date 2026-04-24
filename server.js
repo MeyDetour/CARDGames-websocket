@@ -34,11 +34,6 @@ app.use(cors({
     origin: '*' // ou '*' pour tout le monde
 }));
 
-app.listen(PORT, () => {
-    console.log(`Serveur démarré sur http://localhost:${PORT}`);
-});
-
-
 
 //  ======================== SERVER WEBSOCKET ================================
 
@@ -56,10 +51,16 @@ export const io = new Server(server, {
 
 registerSocket(io)
 
+if (process.env.NODE_ENV !== 'test') {
+// Ne pas ecouter pour les test unitaires
+app.listen(PORT, () => {
+    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+});
 
 
 // Lancement du serveur
 server.listen(process.env.PORT, () => {
     console.log(`Serveur WebSocket en écoute sur le port ${process.env.PORT}`);
 });
+}
 

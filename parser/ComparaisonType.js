@@ -3,6 +3,7 @@ import { TypeManager } from "../core/services/helper/TypeManager.js";
 import TypeInterface from "./TypeInterface.js";
 import Parser from "./parser.js";
 import { errorStack } from "../core/error/ErrorStack.js";
+import PlayerManager from "../core/services/PlayerManager.js";
 
 const comparatortypeLogger = Logger("comparaisonType");
 export default class ComparaisonType extends TypeInterface {
@@ -21,7 +22,7 @@ export default class ComparaisonType extends TypeInterface {
     if (params.fileLogger) {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) +
-          `ComparaisonType.splitLogical called with expression: ${str}`
+          `ComparaisonType.splitLogical called with expression: ${str}`,
       );
     }
     str = ComparaisonType.removeTag(str);
@@ -44,7 +45,7 @@ export default class ComparaisonType extends TypeInterface {
           Parser.translateInnerExpression(current.trim(), gameData, {
             ...params,
             depth: params.depth + 10,
-          })
+          }),
         );
         current = "";
         continue;
@@ -59,13 +60,13 @@ export default class ComparaisonType extends TypeInterface {
         Parser.translateInnerExpression(current.trim(), gameData, {
           ...params,
           depth: params.depth + 10,
-        })
+        }),
       );
     }
     if (params.fileLogger) {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) +
-          `Split into parts: ${structuredClone(list)}`
+          `Split into parts: ${structuredClone(list)}`,
       );
     }
 
@@ -80,14 +81,14 @@ export default class ComparaisonType extends TypeInterface {
 
     if (params.fileLogger) {
       params.fileLogger.log(
-        Parser.getDepthIndentation(params.depth) + `After translation: ${list}`
+        Parser.getDepthIndentation(params.depth) + `After translation: ${list}`,
       );
     }
     let result = ComparaisonType.resolveLogical(list);
     if (params.fileLogger) {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) +
-          `ComparaisonType result: ${result}`
+          `ComparaisonType result: ${result}`,
       );
     }
     return result;
@@ -106,9 +107,10 @@ export default class ComparaisonType extends TypeInterface {
       "isInferiorOrEqual",
       "isSuperiorNumber",
       "isInferiorNumber",
+      "isSuperiorOrEqual",
     ];
     const arrayComparators = ["notContain", "contain"];
-    const comparators = ["differentPlayer","samePlayer"];
+    const comparators = ["differentPlayer", "samePlayer"];
     let a = list[0];
     let b = list[2];
     if (!TypeManager.isDefined(a) || !TypeManager.isDefined(b)) {
@@ -116,7 +118,6 @@ export default class ComparaisonType extends TypeInterface {
       comparatortypeLogger.error(msg);
       LoggerClass.logFileLocalisation();
       errorStack.addError(msg, LoggerClass.logFileLocalisation());
-
       return false;
     }
 
@@ -124,29 +125,50 @@ export default class ComparaisonType extends TypeInterface {
     if (stringComparators.includes(comparateur)) {
       if (comparateur === "isEqualString") return a === b;
     }
-    if (numberComparators.includes(comparateur)) {
+    if (numberComparators.includes(comparateur)) { 
       let a = parseInt(list[0]);
       let b = parseInt(list[2]);
+      if (isNaN(a) || isNaN(b)) {
+        return false;
+      }
       if (comparateur === "isEqualNumber") return a === b;
       if (comparateur === "isNotEqualNumber") return a !== b;
       if (comparateur === "isInferiorOrEqual") return a <= b;
+      if (comparateur === "isSuperiorOrEqual") return a >= b;
       if (comparateur === "isSuperiorNumber") return a > b;
       if (comparateur === "isInferiorNumber") return a < b;
     }
 
     if (arrayComparators.includes(comparateur)) {
-      if (comparateur === "contain") return a.includes(b);
-      if (comparateur === "notContain") return !a.includes(b);
+      if (
+        comparateur === "contain" &&
+        (Array.isArray(a) || typeof a === "string")
+      )
+        return a.includes(b);
+      if (
+        comparateur === "notContain" &&
+        (Array.isArray(a) || typeof a === "string")
+      )
+        return !a.includes(b);
     }
     if (comparators.includes(comparateur)) {
       let playerA = list[0];
       let playerB = list[2];
-      if (comparateur === "differentPlayer") {
+      if (
+        comparateur === "differentPlayer" &&
+        PlayerManager.isPlayerType(playerA) &&
+        PlayerManager.isPlayerType(playerB)
+      ) {
         return playerA.id !== playerB.id;
       }
-      if (comparateur === "samePlayer") {
+      if (
+        comparateur === "samePlayer" &&
+        PlayerManager.isPlayerType(playerA) &&
+        PlayerManager.isPlayerType(playerB)
+      ) {
         return playerA.id === playerB.id;
       }
     }
+    return false;
   }
 }

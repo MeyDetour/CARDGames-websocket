@@ -348,14 +348,13 @@ export default class Evaluator {
    * @param {Object} gameData
    * @returns {boolean}
    */
-  static verifyIsAllPlayerHasPlayed(gameData) {
-    if (gameData.roomInDb.params.tours.endOfTour)
+  static verifyIsAllPlayerHasPlayed(gameData) { 
       for (let player of gameData.data.players) {
         if (!player.hasPlayed.value) {
           return false;
         }
-      }
-    return true;
+      } 
+      return true;
   }
 
   static loadWin(gameData, socket) {

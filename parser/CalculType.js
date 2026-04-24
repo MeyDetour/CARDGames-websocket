@@ -3,6 +3,9 @@ import Parser from "./parser.js";
 
 export default class CalculType extends TypeInterface {
   static removeTag(exp) {
+    if (typeof exp !== "string") {
+      return exp;
+    }
     return exp.substring(5, exp.length - 1);
   }
 
@@ -14,7 +17,7 @@ export default class CalculType extends TypeInterface {
    */
   static splitLogical(str, gameData, params) {
     str = CalculType.removeTag(str);
-    let comparators = ["+", "*", "-","/","%"];
+    let comparators = ["+", "*", "-", "/", "%"];
     let string = "";
     let finalList = [];
     for (let i = 0; i < str.length; i++) {
@@ -30,29 +33,37 @@ export default class CalculType extends TypeInterface {
       finalList.push(string);
     }
     if (params.fileLogger) {
-      params.fileLogger.log(Parser.getDepthIndentation(params.depth) + 
-        `CalculType.splitLogical called with expression: ${str}`
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          `CalculType.splitLogical called with expression: ${str}`,
       );
-      params.fileLogger.log(Parser.getDepthIndentation(params.depth) + `Split into parts: ${finalList}`);
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          `Split into parts: ${finalList}`,
+      );
     }
-    finalList[0] = Parser.translateInnerExpression(
-      finalList[0],
-      gameData,
-      {...params, depth : params.depth+10}
-    );
+    finalList[0] = Parser.translateInnerExpression(finalList[0], gameData, {
+      ...params,
+      depth: params.depth + 10,
+    });
 
-    finalList[2] = Parser.translateInnerExpression(
-      finalList[2],
-      gameData,
-      {...params, depth : params.depth+10}
-    );
+    finalList[2] = Parser.translateInnerExpression(finalList[2], gameData, {
+      ...params,
+      depth: params.depth + 10,
+    });
     if (params.fileLogger) {
-      params.fileLogger.log(Parser.getDepthIndentation(params.depth) + `After translation: ${finalList}`);
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          `After translation: ${finalList}`,
+      );
     }
 
-    let result =  CalculType.resolveLogical(finalList);
+    let result = CalculType.resolveLogical(finalList);
     if (params.fileLogger) {
-      params.fileLogger.log(Parser.getDepthIndentation(params.depth) + `CalculType result: ${result}`);
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          `CalculType result: ${result}`,
+      );
     }
     return result;
   }
@@ -64,12 +75,40 @@ export default class CalculType extends TypeInterface {
    */
   static resolveLogical(list) {
     let comparateur = list[1];
-    let a = parseInt(list[0]);
-    let b = parseInt(list[2]);
-    if (comparateur === "-") return a - b;
-    if (comparateur === "+") return a + b;
-    if (comparateur === "*") return a * b;
-    if (comparateur === "/") return a / b;
-    if (comparateur === "%") return a % b;
+ 
+    const parse = (val) => {
+      if (typeof val === "string") {
+        return parseFloat(val.replace(",", "."));
+      }
+      return parseFloat(val);
+    };
+
+    let a = parse(list[0]);
+    let b = parse(list[2]);
+
+    let result;
+    switch (comparateur) {
+      case "-":
+        result = a - b;
+        break;
+      case "+":
+        result = a + b;
+        break;
+      case "*":
+        result = a * b;
+        break;
+      case "/":
+        result = a / b;
+        break;
+      case "%":
+        result = a % b;
+        break;
+      default:
+        return 0;
+    }
+
+    // Pour arrondir à 2 décimales proprement :
+    // On utilise Number.EPSILON pour éviter les erreurs de virgule flottante (0.1 + 0.2)
+    return Math.round((result + Number.EPSILON) * 100) / 100;
   }
 }

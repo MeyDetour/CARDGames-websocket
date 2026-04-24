@@ -290,7 +290,14 @@ export default class PlayerManager {
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
       return false
-    }  if (!gameData) {
+    }
+    if (element.id == null) {
+      const msg = `Element id is undefined in PlayerManager.isPlayerType(element=${JSON.stringify(element)})`;
+      playerManagerLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      return false
+    }
+    if (!gameData) {
       const msg = `GameData is undefined in PlayerManager.isPlayerType(gameData=${gameData})`;
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
