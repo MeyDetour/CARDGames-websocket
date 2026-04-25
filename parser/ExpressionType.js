@@ -3,6 +3,9 @@ import Parser from "./parser.js";
 
 export default class ExpressionType extends TypeInterface {
   static removeTag(exp) {
+      if (!exp || typeof exp !== "string") {
+        return "";
+      }
     return exp.substring(4, exp.length - 1);
   }
 

@@ -6,6 +6,9 @@ import { LoggerClass } from "../core/logger/logger.js";
 
 export default class FunctionType extends TypeInterface {
   static removeTag(exp) {
+      if (!exp || typeof exp !== "string") {
+        return "";
+      }
     if (exp.startsWith("getPlayer(")) {
       return exp.substring(10, exp.length - 1);
     }

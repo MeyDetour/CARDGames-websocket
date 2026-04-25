@@ -123,6 +123,7 @@ class RoomManager {
 
       data: {
         players: [player],
+        spectators: [],
         isTest: isTest,
         messages: [],
         logs: [],
@@ -233,15 +234,9 @@ class RoomManager {
     }
 
     let gameData = this.getRoom(roomID);
-
-    // empecher la connexion si c'est un test et qu'elle est en cours
-    if (
-      gameData &&
-      gameData.data.state.value !== "waitingPlayers" &&
-      gameData.data.isTest
-    ) {
-      // TODO : Faire rejoindre en spectateur si possible
-    }
+    let isSpectator =
+      gameData.roomInDb.params.globalGame.autoriseSpectator &&
+      gameData.data.state.value !== "waitingPlayers";
 
     if (gameData) {
       socket.join(roomID);
@@ -259,16 +254,29 @@ class RoomManager {
         gameData.roomInDb.assets.gains,
       );
       let playerId = player.id;
-
+      // JOIN AS SPECTATOR IF GAME IS ALREADY STARTED AND SPECTATOR ARE ALLOWED
+      if (isSpectator) {
+        player.isSpectator.value = true;
+      }
       socket.data.playerId = playerId;
-      gameData.data.players.push(player);
-      MessagerieManager.addMessage(gameData, socket, {
-        content: pseudo + " a rejoint la partie",
-      });
+      if (isSpectator) {
 
-      PlayerManager.reORderPlayerPosition(gameData);
-      socket.emit("roomJoined", { gameData, player });
-      socket.to(roomID).emit("playerHasJoinedRoom", gameData);
+        gameData.data.spectators.push(player);
+        MessagerieManager.addMessage(gameData, socket, {
+          content: pseudo + " observe la partie",
+        });
+        socket.emit("roomJoinedAsSpectator", { gameData, player });
+        socket.to(roomID).emit("playerHasJoinedRoomAsSpectator", gameData);
+      } else {
+        gameData.data.players.push(player);
+        MessagerieManager.addMessage(gameData, socket, {
+          content: pseudo + " a rejoint la partie",
+        });
+        PlayerManager.reORderPlayerPosition(gameData);
+
+        socket.emit("roomJoined", { gameData, player });
+        socket.to(roomID).emit("playerHasJoinedRoom", gameData);
+      }
     } else {
       const msg = "Join room failed: Id incorrect -> " + roomID;
       roomLogger.error(msg);
@@ -374,7 +382,7 @@ class RoomManager {
       }
       // alert room
       MessagerieManager.addMessage(gameData, socket, {
-        content: `${pseudo} a quiité la partie`,
+        content: `${pseudo} a quitté la partie`,
       });
 
       // if player is admin , change admin

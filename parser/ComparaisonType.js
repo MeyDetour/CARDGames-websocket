@@ -8,6 +8,9 @@ import PlayerManager from "../core/services/PlayerManager.js";
 const comparatortypeLogger = Logger("comparaisonType");
 export default class ComparaisonType extends TypeInterface {
   static removeTag(exp) {
+      if (!exp || typeof exp !== "string") {
+        return "";
+      }
     return exp.substring(5, exp.length - 1);
   }
 

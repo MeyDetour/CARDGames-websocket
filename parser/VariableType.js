@@ -3,10 +3,13 @@ import { errorStack } from "../core/error/ErrorStack.js";
 import PlayerManager from "../core/services/PlayerManager.js";
 import { TypeManager } from "../core/services/helper/TypeManager.js";
 import TypeInterface from "./TypeInterface.js";
-import Parser from "./parser.js"; 
+import Parser from "./parser.js";
 const variableLogger = Logger("variableType");
 export default class VariableType extends TypeInterface {
   static removeTag(exp) {
+    if (!exp || typeof exp !== "string") {
+      return "";
+    }
     return exp.substring(1, exp.length - 1);
   }
 
@@ -21,17 +24,17 @@ export default class VariableType extends TypeInterface {
     if (!params) {
       params = {};
     }
-    if ( params && params.fileLogger) {
-      params.fileLogger.log(Parser.getDepthIndentation(params.depth) +
-        `VariableType.splitLogical called with expression: ${str}`
+    if (params && params.fileLogger) {
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          `VariableType.splitLogical called with expression: ${str}`,
       );
-     
     }
 
     return this.splitLogicalList(
       this.getListSplited(str, gameData, params),
       gameData,
-      params
+      params,
     );
   }
   static getListSplited(str, gameData, params) {
@@ -40,7 +43,7 @@ export default class VariableType extends TypeInterface {
     }
     if (!TypeManager.isDefined(str)) {
       variableLogger.error(
-        "VariableType.getListSplited called with undefined str"
+        "VariableType.getListSplited called with undefined str",
       );
       return [];
     }
@@ -59,12 +62,12 @@ export default class VariableType extends TypeInterface {
         str = String(str);
       } catch (e) {
         variableLogger.error(
-          "VariableType.getListSplited received non-string value"
+          "VariableType.getListSplited received non-string value",
         );
         return [];
       }
     }
-  
+
     str = VariableType.removeTag(str);
     let depth = 0;
     let list = [];
@@ -85,14 +88,17 @@ export default class VariableType extends TypeInterface {
           let currentCard = Parser.translateInnerExpression(
             current.trim(),
             gameData,
-            {...params, depth : params.depth+10}
+            { ...params, depth: params.depth + 10 },
           );
           list.push(currentCard);
           currentCardForParams = currentCard;
         }
         if (current !== "currentCard" && currentCardForParams === null) {
           list.push(
-            Parser.translateInnerExpression(current.trim(), gameData, {...params, depth : params.depth+10})
+            Parser.translateInnerExpression(current.trim(), gameData, {
+              ...params,
+              depth: params.depth + 10,
+            }),
           );
         }
         if (current !== "currentCard" && currentCardForParams != null) {
@@ -100,8 +106,8 @@ export default class VariableType extends TypeInterface {
             Parser.translateInnerExpression(current.trim(), gameData, {
               ...params,
               currentCard: currentCardForParams,
-             depth : params.depth+10
-            })
+              depth: params.depth + 10,
+            }),
           );
         }
         current = "";
@@ -118,37 +124,49 @@ export default class VariableType extends TypeInterface {
   }
 
   static splitLogicalList(list, gameData, params) {
-    if ( params && params.fileLogger) {
-      params.fileLogger.log( Parser.getDepthIndentation(params.depth) +"Split logical list for : " + JSON.stringify(list));
+    if (params && params.fileLogger) {
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          "Split logical list for : " +
+          JSON.stringify(list),
+      );
     }
-
+    if (!params) {
+      params = {};
+    }
     let value = null;
-    if (!Array.isArray(list))return null
+    if (!Array.isArray(list)) return null;
     for (let i = 0; i < list.length; i++) {
-      let elt = list[i];
+      let elt = list[i]; 
 
       if (params && params.fileLogger) {
-        params.fileLogger.log( Parser.getDepthIndentation(params.depth) +
-          `VariableType.splitLogicalList processing element: ${elt}`
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) +
+            `VariableType.splitLogicalList processing element: ${elt}`,
         );
-        params.fileLogger.log( Parser.getDepthIndentation(params.depth) +`Current value: ${value}`);
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) + `Current value: ${value}`,
+        );
       }
 
       if (!TypeManager.isDefined(value)) {
         //if str = [{playerObject},gain,1]
         if (typeof elt === "object") {
           value = elt;
-        }   else if (elt === "startPlayer") {
+        } else if (elt === "startPlayer") {
           value = PlayerManager.getStartPlayer(gameData);
-        }  else if (elt === "allPlayersInGame") {
+        } else if (elt === "allPlayersInGame") {
           value = gameData.data.players;
-        }  else if (elt === "currentPlayer") {
+        } else if (elt === "currentPlayer") {
           if (params.currentPlayer == null) {
             const msg = `Missing params.currentPlayer for access to 'currentPlayer' in VariableType.splitLogicalList (element=${elt})`;
             variableLogger.error(msg);
             LoggerClass.logFileLocalisation();
             try {
-              errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
             } catch (e) {}
             return null;
           }
@@ -159,7 +177,10 @@ export default class VariableType extends TypeInterface {
             variableLogger.error(msg);
             LoggerClass.logFileLocalisation();
             try {
-              errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
             } catch (e) {}
             return null;
           }
@@ -170,7 +191,10 @@ export default class VariableType extends TypeInterface {
             variableLogger.error(msg);
             LoggerClass.logFileLocalisation();
             try {
-              errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
             } catch (e) {}
             return null;
           }
@@ -184,15 +208,20 @@ export default class VariableType extends TypeInterface {
             variableLogger.error(msg);
             LoggerClass.logFileLocalisation();
             try {
-              errorStack.addError(msg,    LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()));
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
             } catch (e) {}
           }
         } else {
-          value = gameData.data[elt];
+        
+          value = TypeManager.isDefined(gameData.data[elt]) ? gameData.data[elt] : null;
 
-          if ( params && params.fileLogger) {
-            params.fileLogger.log( Parser.getDepthIndentation(params.depth) +
-              `Accessed gameData property '${elt}': ${JSON.stringify(value)}`
+          if (params && params.fileLogger) {
+            params.fileLogger.log(
+              Parser.getDepthIndentation(params.depth) +
+                `Accessed gameData property '${elt}': ${JSON.stringify(value)}`,
             );
           }
 
@@ -215,19 +244,20 @@ export default class VariableType extends TypeInterface {
           if (!TypeManager.isDefined(value)) {
             value = params[elt];
 
-            if ( params && params.fileLogger) {
-              params.fileLogger.log( Parser.getDepthIndentation(params.depth) +
-                `Accessed params property '${elt}': ${JSON.stringify(value)}`
+            if (params && params.fileLogger) {
+              params.fileLogger.log(
+                Parser.getDepthIndentation(params.depth) +
+                  `Accessed params property '${elt}': ${JSON.stringify(value)}`,
               );
             }
 
             if (!TypeManager.isDefined(value)) {
               const msg = `${elt} property is null in params and data in VariableType.splitLogicalList`;
-
-              if ( params && params.fileLogger) {
+               
+              if (params && params.fileLogger) {
                 params.fileLogger.error(msg);
               }
-
+              value = null;
               variableLogger.error(msg);
               JSON.stringify(gameData.data);
               JSON.stringify(params);
@@ -235,24 +265,24 @@ export default class VariableType extends TypeInterface {
               try {
                 errorStack.addError(
                   msg + ` (elt=${elt})`,
-                     LoggerClass.pretty(LoggerClass.getCallerLocation().reverse())
+                  LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
                 );
-              } catch (e) {}
-
+              } catch (e) {} 
               return null;
             }
           }
         }
       } else {
         value = value[elt];
-        if (value === null) {
+        if (!TypeManager.isDefined(value) || value == null) {
           console.warn(
             elt +
               " property is null search :" +
               list +
               " in " +
-              JSON.stringify(value)
+              JSON.stringify(value),
           );
+          value = null;
         }
         if (
           TypeManager.isDefined(value) &&
@@ -271,11 +301,16 @@ export default class VariableType extends TypeInterface {
         }
       }
     }
-    
-    if ( params && params.fileLogger) {
-      params.fileLogger.log( Parser.getDepthIndentation(params.depth) +`VariableType.splitLogicalList final value: ${typeof value}`);
-       params.fileLogger.log( Parser.getDepthIndentation(params.depth) +JSON.stringify(value))
-    } 
+
+    if (params && params.fileLogger) {
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          `VariableType.splitLogicalList final value: ${typeof value}`,
+      );
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) + JSON.stringify(value),
+      );
+    }
     return value;
   }
 }

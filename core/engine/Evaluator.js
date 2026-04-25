@@ -219,11 +219,7 @@ export default class Evaluator {
     let currentPlayerId = PlayerManager.getPlayerWhoHasToPlay(gameData).id;
     for (let p of gameData.data.players) {
       evaluatorLogger.info("search actions for player ID=" + p.id);
-
-      if (p.isSpectator.value) {
-        evaluatorLogger.info("Player is spectator" + p.id);
-        continue;
-      }
+ 
 
       if (fileLogger) fileLogger.log(`search actions for player ID=${p.id}`);
       let player = structuredClone(p);

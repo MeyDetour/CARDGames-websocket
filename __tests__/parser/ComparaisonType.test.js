@@ -13,7 +13,14 @@ describe("Array comparaison - Edge Cases", () => {
         ],
       },
     }; 
-  });
+  }); 
+  it("should remove tag",()=>{
+    expect(ComparaisonType.removeTag('')).toEqual("");
+    expect(ComparaisonType.removeTag(null)).toEqual("");
+    expect(ComparaisonType.removeTag(42545)).toEqual("");
+    expect(ComparaisonType.removeTag( [])).toEqual("");
+    expect(ComparaisonType.removeTag( {})).toEqual("");
+  })
   it("should handle empty arrays", () => { 
     expect(ComparaisonType.resolveLogical([[], "contain", "A"])).toEqual(false);
     expect(ComparaisonType.resolveLogical([["A", "B"], "contain", "a"])).toEqual(false);

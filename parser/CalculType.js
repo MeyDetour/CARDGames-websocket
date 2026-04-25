@@ -3,8 +3,8 @@ import Parser from "./parser.js";
 
 export default class CalculType extends TypeInterface {
   static removeTag(exp) {
-    if (typeof exp !== "string") {
-      return exp;
+    if (!exp || typeof exp !== "string") {
+      return "";
     }
     return exp.substring(5, exp.length - 1);
   }

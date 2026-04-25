@@ -2,12 +2,13 @@ import CalculType from "../../parser/CalculType";
 
 describe("CalculType", () => {
   describe("CalculType - resolveLogical", () => {
-    
     it("should resolve basic % from arrays", () => {
       expect(CalculType.resolveLogical([5, "%", 3])).toEqual(2);
       expect(CalculType.resolveLogical(["5", "%", "3"])).toEqual(2);
-      expect(CalculType.resolveLogical(["5.8548", "%", "86,55"])).toEqual(5.85); 
-      expect(CalculType.resolveLogical(["5,8548", "%", "864.55"])).toEqual(5.85);
+      expect(CalculType.resolveLogical(["5.8548", "%", "86,55"])).toEqual(5.85);
+      expect(CalculType.resolveLogical(["5,8548", "%", "864.55"])).toEqual(
+        5.85,
+      );
       expect(CalculType.resolveLogical([5.8548, "%", "864.55"])).toEqual(5.85);
     });
 
@@ -38,13 +39,22 @@ describe("CalculType", () => {
       expect(CalculType.resolveLogical(["5", "/", "8"])).toEqual(0.63);
       expect(CalculType.resolveLogical(["5,854", "/", 3.54])).toEqual(1.65);
       expect(CalculType.resolveLogical(["5", "/", "100.589"])).toEqual(0.05);
-    });     it("should remove tag ", () => {
-      expect(CalculType.removeTag([5, "/", 3])).toEqual([5, "/", 3]); 
-      expect(CalculType.removeTag(null)).toEqual(null); 
-      expect(CalculType.removeTag("calc(a)")).toEqual("a"); 
-      expect(CalculType.removeTag("calc([a,b,c])")).toEqual("[a,b,c]"); 
-      expect(CalculType.removeTag("comp([a,b,c])")).toEqual("[a,b,c]"); 
-      expect(CalculType.removeTag("comparaison([a,b,c])")).toEqual("raison([a,b,c]"); 
-    }); 
+    });
+    it("should remove tag ", () => {
+      expect(CalculType.removeTag([5, "/", 3])).toEqual("");
+      expect(CalculType.removeTag(null)).toEqual("");
+      expect(CalculType.removeTag("calc(a)")).toEqual("a");
+      expect(CalculType.removeTag("calc([a,b,c])")).toEqual("[a,b,c]");
+      expect(CalculType.removeTag("comp([a,b,c])")).toEqual("[a,b,c]");
+      expect(CalculType.removeTag("comparaison([a,b,c])")).toEqual(
+        "raison([a,b,c]",
+      );
+
+      expect(CalculType.removeTag("")).toEqual("");
+      expect(CalculType.removeTag(null)).toEqual("");
+      expect(CalculType.removeTag(42545)).toEqual("");
+      expect(CalculType.removeTag([])).toEqual("");
+      expect(CalculType.removeTag({})).toEqual("");
+    });
   });
 });

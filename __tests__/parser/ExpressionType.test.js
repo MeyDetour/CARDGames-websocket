@@ -1,6 +1,14 @@
 import ExpressionType from "../../parser/ExpressionType";
 describe("ExpressionType", () => {
   describe("ExpressionType - Full Integration", () => {
+    it("should remove tag",()=>{
+
+          expect(ExpressionType.removeTag('')).toEqual("");
+          expect(ExpressionType.removeTag(null)).toEqual("");
+          expect(ExpressionType.removeTag(42545)).toEqual("");
+          expect(ExpressionType.removeTag( [])).toEqual("");
+          expect(ExpressionType.removeTag( {})).toEqual("");
+    })
     it("should resolve boolean logic from arrays", () => {
       // Test de base : OR
       expect(ExpressionType.resolveLogical([true, "||", false])).toEqual(true);

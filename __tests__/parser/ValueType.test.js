@@ -4,6 +4,11 @@ describe('ValueType', () => {
     // Ajoutez vos assertions ici
     expect(ValueType.removeTag('<<value>>')).toEqual("value");
     expect(ValueType.removeTag('<<>>')).toEqual("");
+        expect(ValueType.removeTag('')).toEqual(""); 
+    expect(ValueType.removeTag(null)).toEqual("");
+    expect(ValueType.removeTag(42545)).toEqual("");
+    expect(ValueType.removeTag( [])).toEqual("");
+    expect(ValueType.removeTag( {})).toEqual("");
     expect(ValueType.removeTag('<value>')).toEqual("alu");
     expect(ValueType.splitLogical('<value>',{},{})).toEqual("alu");
     expect(ValueType.splitLogical('<<value>>',{},{})).toEqual("value");

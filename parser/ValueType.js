@@ -4,6 +4,9 @@ import TypeInterface from "./TypeInterface.js";
 export default class ValueType extends TypeInterface{
 
     static removeTag(exp){
+        if (!exp || typeof exp !== "string") {
+            return "";
+        }
         return exp.substring(2, exp.length - 2)
     }
 

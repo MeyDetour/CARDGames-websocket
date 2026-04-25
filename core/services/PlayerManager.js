@@ -103,6 +103,18 @@ export default class PlayerManager {
     return result;
   }
   static getStartPlayer(gameData) {
+    if (!gameData) {
+      const msg = `Game Data is undefined in PlayerManager.getStartPlayer()`;
+      playerManagerLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      try {
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
+      } catch (e) {}
+      return null;
+    }
     let nextP = PlayerManager.getPlayerWithPosition(gameData, 1);
     while (PlayerManager.isPlayerActifInGame(nextP)) {
       nextP = PlayerManager.getNextPlayer(gameData, 1);
@@ -290,13 +302,7 @@ export default class PlayerManager {
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
       return false
-    }
-    if (element.id == null) {
-      const msg = `Element id is undefined in PlayerManager.isPlayerType(element=${JSON.stringify(element)})`;
-      playerManagerLogger.error(msg);
-      LoggerClass.logFileLocalisation();
-      return false
-    }
+    } 
     if (!gameData) {
       const msg = `GameData is undefined in PlayerManager.isPlayerType(gameData=${gameData})`;
       playerManagerLogger.error(msg);
@@ -349,7 +355,8 @@ export default class PlayerManager {
         ? globalValueOfPlayer[key].defaultValue
         : TypeManager.getDefaultValueOfType(globalValueOfPlayer[key].type);
     }
-    gameData.data.players.forEach((player) => {
+    let newPlayers = [];
+    [...gameData.data.players,...gameData.data.spectators].forEach((player) => {
       let newPlayer = { ...player, ...globalValueOfPlayer };
       console.log(newPlayer);
       newPlayer.hasPlayed.value = false;
@@ -367,15 +374,19 @@ export default class PlayerManager {
         value: [],
       };
       newPlayer.gain = { type: "object", value: { ...gainObject } };
-      this.updatePlayerObject(newPlayer, gameData);
+      newPlayers.push(newPlayer); 
     });
+    gameData.data.players = newPlayers;
+    gameData.data.spectators = [];
   }
 
   static setPlayerAsSpectator(playerId, gameData, socket) {
     for (let p of gameData.data.players) {
-      if (p.id === playerId) {
-        p.isSpectator.value = true;
-        this.updatePlayerObject(p, gameData);
+      if (p.id === playerId) {  
+      let player =  gameData.data.players.find(s => s.id === playerId) 
+         gameData.data.spectators.push(player);
+         gameData.data.players = gameData.data.players.filter(s => s.id !== playerId) 
+         PlayerManager.reORderPlayerPosition(gameData);
         socket.to(p.socketID).emit("youAreSpectator");
       }
     }
