@@ -234,11 +234,18 @@ class RoomManager {
     }
 
     let gameData = this.getRoom(roomID);
+    let isSpectatorAuthorized =
+      gameData.roomInDb.params.globalGame.autoriseSpectator ?? false;
     let isSpectator =
-      gameData.roomInDb.params.globalGame.autoriseSpectator &&
-      gameData.data.state.value !== "waitingPlayers";
+      isSpectatorAuthorized && gameData.data.state.value !== "waitingPlayers";
 
     if (gameData) {
+      if (this.isFullRoom(gameData) && !isSpectator) {
+        new AppError(socket, "La partie est déjà pleine, vous ne pouvez pas la rejoindre");
+        return
+      } if (this.isFullRoom(gameData) && isSpectatorAuthorized) {
+        isSpectator = true;
+      }
       socket.join(roomID);
       socket.data.roomId = roomID;
       socket.data.pseudo = pseudo;
@@ -260,7 +267,6 @@ class RoomManager {
       }
       socket.data.playerId = playerId;
       if (isSpectator) {
-
         gameData.data.spectators.push(player);
         MessagerieManager.addMessage(gameData, socket, {
           content: pseudo + " observe la partie",
@@ -344,7 +350,12 @@ class RoomManager {
       }
     }
   }
-
+  isFullRoom(gameData) {
+    return (
+      gameData.data.players.length >=
+      gameData.roomInDb.params.globalGame.maxPlayer
+    );
+  }
   disconnectPlayer(socket) {
     console.log("TRY TO DISCONNECT PLAYER");
     const roomId = socket.data.roomId;
@@ -370,12 +381,18 @@ class RoomManager {
       gameData.data.players = gameData.data.players.filter(
         (p) => p.id !== playerId,
       );
+      gameData.data.spectators = gameData.data.spectators.filter(
+        (p) => p.id !== playerId,
+      );
       roomLogger.info(
         `${pseudo} a quitté la room ${roomId}. Joueurs restants : ${gameData.data.players.length}`,
       );
 
       // delete player if he's the last
-      if (gameData.data.players.length === 0) {
+      if (
+        gameData.data.players.length + gameData.data.spectators.length ===
+        0
+      ) {
         this.removeRoom(roomId);
         roomLogger.info(`Room ${roomId} supprimée car elle est vide.`);
         return;

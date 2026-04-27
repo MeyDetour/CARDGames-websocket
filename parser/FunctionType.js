@@ -24,7 +24,8 @@ export default class FunctionType extends TypeInterface {
         Parser.getDepthIndentation(params.depth) +
           `FunctionType.splitLogical called with expression: ${str}`,
       );
-    }
+    } 
+    
     if (str.startsWith("getPlayer(")) {
       // enlever le tag apres avoir verifier dans quel if renvoyer l'expression, ne pas fusionner avec les autres
       str = FunctionType.removeTag(str);

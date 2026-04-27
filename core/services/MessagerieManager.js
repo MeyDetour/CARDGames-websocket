@@ -7,14 +7,14 @@ export class MessagerieManager {
       new AppError(socket, "Le joueur n'est dans aucune partie", {
         code: "ROOM_NOT_FOUND",
       });
-      retturn;
+      return;
     }
     let gameData = roomManager.getRoom(roomId);
     if (!gameData) {
       new AppError(socket, "Partie non trouvée", {
         code: "ROOM_NOT_FOUND",
       });
-      retturn;
+      return;
     }
     let players = gameData.data.players.filter(
       (p) => p.id === message.playerId,
@@ -23,7 +23,7 @@ export class MessagerieManager {
       new AppError(socket, "Le joueur n'est pas dans la partie", {
         code: "ROOM_NOT_FOUND",
       });
-      retturn;
+      return;
     }
    
     this.addMessage(gameData, socket, message);
