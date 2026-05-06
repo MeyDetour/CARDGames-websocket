@@ -87,7 +87,7 @@ class RoomManager {
       },
       gameInDB["playerGlobalValue"],
 
-      gameInDB["assets"]["gains"],
+      gameInDB["assets"] ? gameInDB["assets"]["gains"] : [],
     );
 
     // generate room Id
@@ -272,7 +272,7 @@ class RoomManager {
           content: pseudo + " observe la partie",
         });
         socket.emit("roomJoinedAsSpectator", { gameData, player });
-        socket.to(roomID).emit("playerHasJoinedRoomAsSpectator", gameData);
+        socket.to(roomID).emit("playerHasJoinedRoomAsSpectator", {gameData,player});
       } else {
         gameData.data.players.push(player);
         MessagerieManager.addMessage(gameData, socket, {

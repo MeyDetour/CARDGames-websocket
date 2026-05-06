@@ -1,5 +1,5 @@
 import { Logger, LoggerClass } from "../logger/logger.js";
-import {TypeManager} from "./helper/TypeManager.js";
+import { TypeManager } from "./helper/TypeManager.js";
 import { errorStack } from "../error/ErrorStack.js";
 const playerManagerLogger = Logger("PlayerManager");
 export default class PlayerManager {
@@ -301,15 +301,15 @@ export default class PlayerManager {
       const msg = `Element is undefined in PlayerManager.isPlayerType(element=${element})`;
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      return false
-    } 
+      return false;
+    }
     if (!gameData) {
       const msg = `GameData is undefined in PlayerManager.isPlayerType(gameData=${gameData})`;
       playerManagerLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      return false
+      return false;
     }
-    
+
     if (element.id) {
       const player = gameData.data.players.filter(
         (v) => v.id === element.id,
@@ -356,39 +356,120 @@ export default class PlayerManager {
         : TypeManager.getDefaultValueOfType(globalValueOfPlayer[key].type);
     }
     let newPlayers = [];
-    [...gameData.data.players,...gameData.data.spectators].forEach((player) => {
-      let newPlayer = { ...player, ...globalValueOfPlayer };
-      console.log(newPlayer);
-      newPlayer.hasPlayed.value = false;
-      newPlayer.handDeck.value = []; //card id
-      newPlayer.personalHandDeck.value = []; //card id
-      newPlayer.personalHandDiscard.value = []; // card id
-      newPlayer.hasPlayed.value = false;
-      newPlayer.hasloose.value = false;
-      newPlayer.isSpectator.value = false;
-      newPlayer.haswin.value = false;
-      newPlayer.actions.value = [];
-      newPlayer.roles.value = [];
-      newPlayer.attachedEventForTour = {
-        type: "array",
-        value: [],
-      };
-      newPlayer.gain = { type: "object", value: { ...gainObject } };
-      newPlayers.push(newPlayer); 
-    });
+    [...gameData.data.players, ...gameData.data.spectators].forEach(
+      (player) => {
+        let newPlayer = PlayerManager.restartPlayer(
+          player,
+          gainObject,
+          globalValueOfPlayer,
+        );
+        newPlayers.push(newPlayer);
+      },
+    );
     gameData.data.players = newPlayers;
     gameData.data.spectators = [];
+  }
+  static restartPlayer(player, gainObject, globalValueOfPlayer) {
+    // on itere dans les joueurs
+    // on utilise updatePlayerObject pour mettre à jour les joueurs
+    // plutot que d'ecraser data.players afin d'eviter
+    // les effets de bord et problemes de réferences
+
+    let newPlayer = { ...player, ...globalValueOfPlayer };
+    console.log(newPlayer);
+    if (TypeManager.isDefined(newPlayer.hasPlayed)) {
+      newPlayer.hasPlayed.value = false;
+    } else {
+      newPlayer.hasPlayed = { type: "boolean", value: false };
+    }
+    if (TypeManager.isDefined(newPlayer.hasloose)) {
+      newPlayer.hasloose.value = false;
+    } else {
+      newPlayer.hasloose = { type: "boolean", value: false };
+    }
+    if (TypeManager.isDefined(newPlayer.haswin)) {
+      newPlayer.haswin.value = false;
+    } else {
+      newPlayer.haswin = { type: "boolean", value: false };
+    }
+    if (TypeManager.isDefined(newPlayer.handDeck)) {
+      newPlayer.handDeck.value = [];
+    } else {
+      newPlayer.handDeck = { type: "cardList", value: [] };
+    }
+    if (TypeManager.isDefined(newPlayer.personalHandDeck)) {
+      newPlayer.personalHandDeck.value = [];
+    } else {
+      newPlayer.personalHandDeck = { type: "cardList", value: [] };
+    }
+    if (TypeManager.isDefined(newPlayer.personalHandDiscard)) {
+      newPlayer.personalHandDiscard.value = [];
+    } else {
+      newPlayer.personalHandDiscard = { type: "cardList", value: [] };
+    }
+    if (TypeManager.isDefined(newPlayer.actions)) {
+      newPlayer.actions.value = [];
+    } else {
+      newPlayer.actions = { type: "array", value: [] };
+    }
+    if (TypeManager.isDefined(newPlayer.roles)) {
+      newPlayer.roles.value = [];
+    } else {
+      newPlayer.roles = { type: "array", value: [] };
+    }
+ if (TypeManager.isDefined(newPlayer.hasPlayed)) {
+      newPlayer.hasPlayed.value = false;
+    } else {
+      newPlayer.hasPlayed = { type: "boolean", value: false };
+    } 
+       if (TypeManager.isDefined(newPlayer.attachedEventForTour)) {
+      newPlayer.attachedEventForTour.value = [];
+    } else {
+      newPlayer.attachedEventForTour = { type: "array", value: [] };
+    } 
+    newPlayer.gain = { type: "object", value: { ...gainObject } };
+    return newPlayer;
   }
 
   static setPlayerAsSpectator(playerId, gameData, socket) {
     for (let p of gameData.data.players) {
-      if (p.id === playerId) {  
-      let player =  gameData.data.players.find(s => s.id === playerId) 
-         gameData.data.spectators.push(player);
-         gameData.data.players = gameData.data.players.filter(s => s.id !== playerId) 
-         PlayerManager.reORderPlayerPosition(gameData);
+      if (p.id === playerId) {
+        let player = gameData.data.players.find((s) => s.id === playerId);
+        gameData.data.spectators.push(player);
+        gameData.data.players = gameData.data.players.filter(
+          (s) => s.id !== playerId,
+        );
+        PlayerManager.reORderPlayerPosition(gameData);
         socket.to(p.socketID).emit("youAreSpectator");
       }
     }
+  }
+  static setSpectatorAsPlayer(spectatorId, gameData) {
+    // on itere dans les joueurs
+    // on utilise updatePlayerObject pour mettre à jour les joueurs
+    // plutot que d'ecraser data.players afin d'eviter
+    // les effets de bord et problemes de réferences
+    let gainObject = {};
+    for (let gain of gameData.roomInDb.assets.gains) {
+      gainObject[gain.id] = { value: 0 };
+    }
+    let globalValueOfPlayer = { ...gameData.roomInDb.playerGlobalValue };
+    for (let key of Object.keys(globalValueOfPlayer)) {
+      globalValueOfPlayer[key].value = globalValueOfPlayer[key].defaultValue
+        ? globalValueOfPlayer[key].defaultValue
+        : TypeManager.getDefaultValueOfType(globalValueOfPlayer[key].type);
+    }
+    let newPlayer = PlayerManager.restartPlayer(
+      gameData.data.spectators.find((s) => s.id === spectatorId),
+      gainObject,
+      globalValueOfPlayer,
+    );
+
+    gameData.data.players.push(newPlayer);
+    gameData.data.spectators = gameData.data.spectators.filter(
+      (s) => s.id !== spectatorId,
+    );
+    PlayerManager.reORderPlayerPosition(gameData);
+    return newPlayer;
   }
 }
