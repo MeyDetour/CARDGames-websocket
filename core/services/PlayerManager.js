@@ -417,16 +417,16 @@ export default class PlayerManager {
     } else {
       newPlayer.roles = { type: "array", value: [] };
     }
- if (TypeManager.isDefined(newPlayer.hasPlayed)) {
+    if (TypeManager.isDefined(newPlayer.hasPlayed)) {
       newPlayer.hasPlayed.value = false;
     } else {
       newPlayer.hasPlayed = { type: "boolean", value: false };
-    } 
-       if (TypeManager.isDefined(newPlayer.attachedEventForTour)) {
+    }
+    if (TypeManager.isDefined(newPlayer.attachedEventForTour)) {
       newPlayer.attachedEventForTour.value = [];
     } else {
       newPlayer.attachedEventForTour = { type: "array", value: [] };
-    } 
+    }
     newPlayer.gain = { type: "object", value: { ...gainObject } };
     return newPlayer;
   }
@@ -465,7 +465,7 @@ export default class PlayerManager {
       globalValueOfPlayer,
     );
 
-    gameData.data.players.push(newPlayer);
+    gameData.data.players = [...gameData.data.players, newPlayer];
     gameData.data.spectators = gameData.data.spectators.filter(
       (s) => s.id !== spectatorId,
     );

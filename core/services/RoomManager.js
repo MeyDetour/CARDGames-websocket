@@ -188,7 +188,7 @@ class RoomManager {
     });
 
     socket.emit("roomCreated", { gameData, player });
-    socket.to(roomID).emit("playerHasJoinedRoom", gameData);
+    socket.to(roomID).emit("playerHasJoinedRoom", { gameData, player });
   }
 
   joinRoom(roomID, pseudo, skin, socket) {
@@ -281,7 +281,7 @@ class RoomManager {
         PlayerManager.reORderPlayerPosition(gameData);
 
         socket.emit("roomJoined", { gameData, player });
-        socket.to(roomID).emit("playerHasJoinedRoom", gameData);
+        socket.to(roomID).emit("playerHasJoinedRoom", {gameData,player});
       }
     } else {
       const msg = "Join room failed: Id incorrect -> " + roomID;
