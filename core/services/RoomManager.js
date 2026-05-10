@@ -153,7 +153,7 @@ class RoomManager {
 
         deck: {
           type: "cardList",
-          value: Object.keys(gameInDB.assets.cards).map((key) => parseInt(key)),
+          value: Object.keys(gameInDB.assets.cards),
         },
         discardDeck: {
           type: "cardList",

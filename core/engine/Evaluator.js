@@ -39,18 +39,24 @@ export default class Evaluator {
    */
   static loadDemon(gameData, socket, params) {
     let fileLogger = null;
+
+    // CREATE DEMON FILE LOG
     if (process.env.ENGINE_FILE_LOG !== "false") {
       fileLogger = FileLogger.create([
         "LOAD DEMON",
         "=====================",
       ]);
       evaluatorLogger.info(this.evaluatorLogTitle("loadDemon"));
+      evaluatorLogger.info("Load Demon with params : " + JSON.stringify(params));
       if (fileLogger) {
         evaluatorLogger.info(
           `[fileLogger] Log file created: ${fileLogger.filepath}`,
         );
       }
     }
+
+
+    // No demons
     if (!gameData.roomInDb.events["demons"]) {
       new AppError(socket, "Demon folder does not exist!");
       if (fileLogger) {
@@ -61,19 +67,28 @@ export default class Evaluator {
       }
       return null;
     }
+
+
+    // GET CURRENT PLAYER
     params.currentPlayer = PlayerManager.getPlayerWhoHasToPlay(gameData).id;
     if (!params.currentPlayer) {
       evaluatorLogger.warn("There is no current player");
       if (fileLogger) fileLogger.warn("There is no current player");
     }
+
+
+    // VERIFY ALL DEMONS
     let c = 0;
     for (let demon of gameData.roomInDb.events["demons"]) {
+      
+      // LOG START DEMON CHECK
       if (fileLogger) {
         fileLogger.log(
           `Check demon: ${demon.name || "unnamed"} | condition: ${demon.condition}`,
         );
         fileLogger.log(LoggerClass.pretty(demon));
       }
+      // IF THERE NO CONDITION OR NAME
       if (!demon.name || !demon.condition) {
         if (fileLogger) {
           fileLogger.warn(
@@ -84,6 +99,8 @@ export default class Evaluator {
       }
       // evaluatorLogger.debug("====DEMON [" + demon.id + "]: " + demon.name);
       let result = null;
+
+      // IF DEMON MUST ITERATE ON ELEMENT TO CHECK CONDITION
       if (demon.boucle) {
         if (fileLogger) fileLogger.log(`Demon boucle: ${demon.boucle}`);
         let elts = Parser.translateInnerExpression(
@@ -135,6 +152,8 @@ export default class Evaluator {
           }
         }
       } else {
+
+        // IF ITS SIMPLE CONDITION
         result = Parser.translateInnerExpression(demon.condition, gameData, {
           ...params,
           eventEmited: params?.originEvent,
