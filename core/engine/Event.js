@@ -17,7 +17,7 @@ const eventLogger = Logger("Event");
 /**
  * Gestionnaire des événements définis dans les définitions de partie.
  * Fournit des méthodes statiques pour rechercher, exécuter et gérer
- * les différents types d'événements (boucles, withValue, actions, etc.).
+ * les différents types d'événements (boucles, event, actions, etc.).
  */
 export default class Event {
   /**
@@ -643,6 +643,7 @@ export default class Event {
     //  inputNumber: "calc({currentPlayer#currentBet}+{insertedValue})",
     //},
 
+    // get value of each params
     for (let key of Object.keys(shortWithValueEvent)) {
       if (key != "id" && key != "componentId") {
         let newParam = Parser.translateInnerExpression(
@@ -672,13 +673,14 @@ export default class Event {
         }
         params[key] = newParam;
       }
-    }
-    console.log("withValueEvent params :>> ", params);
+    } 
 
+
+    // find event with id ======================================================
     eventLogger.info("Search WithValue Event  ID: " + shortWithValueEvent.id);
-    if (!gameData.roomInDb.events["withValueEvent"]) {
+    if (!gameData.roomInDb.events.events) {
       const msg =
-        "you data object must have with value array " + withValueEvent.id;
+        "you data object must have with value array " + shortWithValueEvent.id;
       eventLogger.error(msg);
       LoggerClass.logFileLocalisation();
       errorStack.addError(
@@ -688,12 +690,11 @@ export default class Event {
 
       return null;
     }
-
-    let event = gameData.roomInDb.events["withValueEvent"].filter(
+    let event = gameData.roomInDb.events.events.filter(
       (event) => event.id == shortWithValueEvent.id,
     )[0];
     if (!event) {
-      const msg = "Event not found! ID=" + withValueEvent.id;
+      const msg = "Event not found! ID=" + shortWithValueEvent.id;
       actionLogger.error(msg);
       LoggerClass.logFileLocalisation();
       errorStack.addError(
@@ -703,7 +704,7 @@ export default class Event {
       return null;
     }
 
-    console.log("params :>> ", params);
+    //execute event         =====================================================
 
     Event.ExecuteEvent(event, socket, gameData, { ...params }, "withValue");
   }

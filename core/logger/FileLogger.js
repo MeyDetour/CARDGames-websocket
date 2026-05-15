@@ -21,6 +21,9 @@ export default class FileLogger {
        section: (title) => {
          fs.appendFileSync(filepath, `\n--- ${title.toUpperCase()} ---\n`);
        },
+       warn: (msg = "") => {
+         fs.appendFileSync(filepath, `\n!!! WARNING !!!\n${msg}\n`);
+       },
  
        error: (err, context = "") => {
          const time = new Date().toISOString();

@@ -49,12 +49,15 @@ export default class Action {
     this.logs = logs;
     this.params = params;
     this.index = index;
+
+    // Object used to save action log for test
     this.actionEventForTest = {
       testType: testType,
       diffs: [],
       executionDate: new Date(),
       ...event,
     };
+    
     const actionLogger = Logger("Action Event ID=" + this.event?.id);
     this.actionLogger = actionLogger;
 

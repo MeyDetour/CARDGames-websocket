@@ -91,7 +91,6 @@ export default class GameManager {
         gameData,
         gameData.data.currentPlayerPosition.value,
       );
-
       gameData.data.currentPlayerPosition.value = nextP.position;
     } while (
       nextP.attachedEventForTour.value.includes("skipPlayerTour") ||

@@ -232,6 +232,13 @@ export default class PlayerManager {
     }
   }
 
+  // update player object in game data if exist in player list
+  // playerObject can be full or partial object of player but must contain id
+  // gameData is used to find player list and update the good player object
+  // playerObjectList is used when we want to access {player#card} if we
+  // have just the card list we cant access player, so we must store the path to access to the card list
+  // in this case its [player,card] = playerObjectList
+  // thanks this we will be able to search the player source object of this card list and update it
   static updatePlayerObject(playerObject, gameData, playerObjectList = null) {
     if (!playerObject && !playerObjectList) {
       return;

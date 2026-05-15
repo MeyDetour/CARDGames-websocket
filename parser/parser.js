@@ -273,25 +273,29 @@ export default class Parser {
     return str;
   }
 
-  static verifyExpressionSyntax(str) {
+   static verifyExpressionSyntax(str) {
     let expression = "";
     let isInVariable = false;
     let depth = 0;
+    let lastChar = "";
     for (let i = 0; i < str.length; i++) {
       const c = str[i];
 
       if (c === "{") {
         depth++;
         isInVariable = true;
+        lastChar = c;
         continue;
       }
       if (c === "(") {
         depth++;
+        lastChar = c;
         continue;
       }
       // si on est a la fin d'une variable on va verifier le contenu
-      if (c === "}") {
+      if (c === "}"&& lastChar === "{") {
         depth--;
+        lastChar = null;
         // contenu =  aaa#bbb#ccc
         // si contenu = a#   ou #b  on aura ["a",""] ou ["","b"] et c'est pas bon
         if (expression.includes("#")) {
@@ -303,8 +307,9 @@ export default class Parser {
         isInVariable = false;
         continue;
       }
-      if (c === ")") {
+      if (c === ")" && lastChar === "(") {
         depth--;
+        lastChar = null;
         continue;
       }
       if (isInVariable) {

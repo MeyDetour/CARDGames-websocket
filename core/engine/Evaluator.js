@@ -42,19 +42,17 @@ export default class Evaluator {
 
     // CREATE DEMON FILE LOG
     if (process.env.ENGINE_FILE_LOG !== "false") {
-      fileLogger = FileLogger.create([
-        "LOAD DEMON",
-        "=====================",
-      ]);
+      fileLogger = FileLogger.create(["LOAD DEMON", "====================="]);
       evaluatorLogger.info(this.evaluatorLogTitle("loadDemon"));
-      evaluatorLogger.info("Load Demon with params : " + JSON.stringify(params));
+      evaluatorLogger.info(
+        "Load Demon with params : " + JSON.stringify(params),
+      );
       if (fileLogger) {
         evaluatorLogger.info(
           `[fileLogger] Log file created: ${fileLogger.filepath}`,
         );
       }
     }
-
 
     // No demons
     if (!gameData.roomInDb.events["demons"]) {
@@ -68,7 +66,6 @@ export default class Evaluator {
       return null;
     }
 
-
     // GET CURRENT PLAYER
     params.currentPlayer = PlayerManager.getPlayerWhoHasToPlay(gameData).id;
     if (!params.currentPlayer) {
@@ -76,11 +73,9 @@ export default class Evaluator {
       if (fileLogger) fileLogger.warn("There is no current player");
     }
 
-
     // VERIFY ALL DEMONS
     let c = 0;
     for (let demon of gameData.roomInDb.events["demons"]) {
-      
       // LOG START DEMON CHECK
       if (fileLogger) {
         fileLogger.log(
@@ -91,6 +86,7 @@ export default class Evaluator {
       // IF THERE NO CONDITION OR NAME
       if (!demon.name || !demon.condition) {
         if (fileLogger) {
+          console.log(fileLogger);
           fileLogger.warn(
             `Demon missing name or condition: ${JSON.stringify(demon)}`,
           );
@@ -146,19 +142,22 @@ export default class Evaluator {
               gameData,
               params,
             );
-            if (fileLogger) fileLogger.log(
-              `Boucle result for playerBoucle: ${JSON.stringify(result)}`,
-            );
+            if (fileLogger)
+              fileLogger.log(
+                `Boucle result for playerBoucle: ${JSON.stringify(result)}`,
+              );
           }
         }
       } else {
-
         // IF ITS SIMPLE CONDITION
         result = Parser.translateInnerExpression(demon.condition, gameData, {
           ...params,
           eventEmited: params?.originEvent,
         });
-        if (fileLogger) fileLogger.log(`Result for demon condition: ${JSON.stringify(result)}`);
+        if (fileLogger)
+          fileLogger.log(
+            `Result for demon condition: ${JSON.stringify(result)}`,
+          );
         // un demon appelé par un originEvent (ChangerManche,changertour etc)
         // declenche des evenements et demons, eviter de repeter deux fois le
         //  meme demon alors qu'il n'a pas fini d'executer ses evenements
@@ -178,7 +177,8 @@ export default class Evaluator {
           " le résultat n'est pas un boolean mais : " +
           JSON.stringify(result);
         evaluatorLogger.error(msg);
-        if (fileLogger) fileLogger.error(new Error(msg), "Evaluator.js  -->  loadDemon()");
+        if (fileLogger)
+          fileLogger.error(new Error(msg), "Evaluator.js  -->  loadDemon()");
         LoggerClass.logFileLocalisation();
         errorStack.addError(
           msg,
@@ -238,7 +238,6 @@ export default class Evaluator {
     let currentPlayerId = PlayerManager.getPlayerWhoHasToPlay(gameData).id;
     for (let p of gameData.data.players) {
       evaluatorLogger.info("search actions for player ID=" + p.id);
- 
 
       if (fileLogger) fileLogger.log(`search actions for player ID=${p.id}`);
       let player = structuredClone(p);
@@ -254,17 +253,42 @@ export default class Evaluator {
               currentPlayer: currentPlayerId,
             },
           );
-          if (fileLogger) fileLogger.log(
-            `Action condition for ${a.name || "unnamed"}: ${JSON.stringify(resultOFCondition)}`,
-          );
+          if (fileLogger)
+            fileLogger.log(
+              `Action condition for ${a.name || "unnamed"}: ${JSON.stringify(resultOFCondition)}`,
+            );
         }
 
+        // return truc if  resultOFCondition is not defined because
+        // some actions dont have any condition
         if (
           (a.appearAtPlayerTurn ? p.id == currentPlayerId : true) &&
           (TypeManager.isDefined(resultOFCondition) ? resultOFCondition : true)
         ) {
           player.actions.value.push(a);
-          if (fileLogger) fileLogger.log(`Action added: ${a.name || "unnamed"}`);
+          if (fileLogger)
+            fileLogger.log(`Action added: ${a.name || "unnamed"}`);
+          if (a.actionOnHand && a.conditionOfCardSelection) {
+            for (let cardId of player.handDeck.value) {
+              let card = gameData.data.cards[cardId];
+              if (card) {
+                let result = Parser.translateInnerExpression(
+                  a.conditionOfCardSelection,
+                  gameData,
+                  {
+                    currentPlayer: currentPlayerId,
+                    playerCard: card,
+                  },
+                );
+                if (!player.cardsSelectableForActionOnHand) {
+                  player.cardsSelectableForActionOnHand = { value: [] };
+                }
+                player.cardsSelectableForActionOnHand.value.push(cardId);
+              }
+            }
+            if(fileLogger)
+              fileLogger.log(`Cards selectable for action on hand: ${JSON.stringify(player.cardsSelectableForActionOnHand)}`);
+          }
         }
       }
       PlayerManager.updatePlayerObject(player, gameData);
@@ -281,7 +305,7 @@ export default class Evaluator {
     if (process.env.ENGINE_FILE_LOG !== "false") {
       fileLogger = FileLogger.create([
         "LOAD GLOBAL VALUE STATIC",
-        "========================="
+        "=========================",
       ]);
       evaluatorLogger.info(this.evaluatorLogTitle("loadGlobalValueStatic"));
       if (fileLogger) {
@@ -306,7 +330,8 @@ export default class Evaluator {
         evaluatorLogger.info(
           `Load global static value ${s} with value : ${value}`,
         );
-        if (fileLogger) fileLogger.log(`Load global static value ${s} with value : ${value}`);
+        if (fileLogger)
+          fileLogger.log(`Load global static value ${s} with value : ${value}`);
       }
     }
   }
@@ -320,10 +345,7 @@ export default class Evaluator {
   static loadRoles(gameData, socket) {
     let fileLogger = null;
     if (process.env.ENGINE_FILE_LOG !== "false") {
-      fileLogger = FileLogger.create([
-        "LOAD ROLES",
-        "=====================",
-      ]);
+      fileLogger = FileLogger.create(["LOAD ROLES", "====================="]);
       evaluatorLogger.info(this.evaluatorLogTitle("loadRoles"));
       if (fileLogger) {
         evaluatorLogger.info(
@@ -345,16 +367,18 @@ export default class Evaluator {
         if (player.roles.value.filter((pr) => pr.name == r.name).length === 0) {
           player.roles.value.push(r);
           PlayerManager.updatePlayerObject(player, gameData);
-          if (fileLogger) fileLogger.log(`Role ${r.name} assigned to player ${player.id}`);
+          if (fileLogger)
+            fileLogger.log(`Role ${r.name} assigned to player ${player.id}`);
         }
       } else {
         evaluatorLogger.error(
           "Il n'y pas de player trouvé pour " + r.attribution,
         );
-        if (fileLogger) fileLogger.error(
-          new Error("No player found for " + r.attribution),
-          "Evaluator.js  -->  loadRoles()",
-        );
+        if (fileLogger)
+          fileLogger.error(
+            new Error("No player found for " + r.attribution),
+            "Evaluator.js  -->  loadRoles()",
+          );
       }
     }
   }
@@ -363,13 +387,13 @@ export default class Evaluator {
    * @param {Object} gameData
    * @returns {boolean}
    */
-  static verifyIsAllPlayerHasPlayed(gameData) { 
-      for (let player of gameData.data.players) {
-        if (!player.hasPlayed.value) {
-          return false;
-        }
-      } 
-      return true;
+  static verifyIsAllPlayerHasPlayed(gameData) {
+    for (let player of gameData.data.players) {
+      if (!player.hasPlayed.value) {
+        return false;
+      }
+    }
+    return true;
   }
 
   static loadWin(gameData, socket) {
@@ -414,7 +438,8 @@ export default class Evaluator {
     let victory = false;
     let winners = [];
 
-    if (fileLogger) fileLogger.log(" Analyse de la boucle : " + winParams.boucle);
+    if (fileLogger)
+      fileLogger.log(" Analyse de la boucle : " + winParams.boucle);
     if (winParams.boucle) {
       let elts = Parser.translateInnerExpression(winParams.boucle, gameData, {
         precedentFileLogger: fileLogger,
@@ -478,7 +503,8 @@ export default class Evaluator {
             !player.haswin.value
           ) {
             winners.push(player);
-            if (fileLogger) fileLogger.log(` Joueur ajouté aux gagnants: ${player.id}`);
+            if (fileLogger)
+              fileLogger.log(` Joueur ajouté aux gagnants: ${player.id}`);
           }
         }
       }
@@ -489,9 +515,10 @@ export default class Evaluator {
       // si il y a vainqueur alors victoire
       if (winners.length > 0) {
         victory = true;
-        if (fileLogger) fileLogger.log(
-          ` Il y a des gagnants: ${winners.map((w) => w.id).join(",")}`,
-        );
+        if (fileLogger)
+          fileLogger.log(
+            ` Il y a des gagnants: ${winners.map((w) => w.id).join(",")}`,
+          );
       }
       // mais si on voulait tous vainqueur alors pas victoire
       if (
@@ -499,9 +526,10 @@ export default class Evaluator {
         winners.length != elts.length
       ) {
         victory = false;
-        if (fileLogger) fileLogger.log(
-          ` Tous les éléments doivent satisfaire la condition mais ce n'est pas le cas.`,
-        );
+        if (fileLogger)
+          fileLogger.log(
+            ` Tous les éléments doivent satisfaire la condition mais ce n'est pas le cas.`,
+          );
       }
       if (winParams.applyOnAllPlayers && victory) {
         if (fileLogger) fileLogger.log(` Victoire collective, fin de partie.`);
@@ -512,17 +540,19 @@ export default class Evaluator {
           p.hasloose.value = !winners.map((w) => w.id).includes(p.id);
           PlayerManager.updatePlayerObject(p, gameData);
         }
-        if (fileLogger) fileLogger.log(
-          `Mise à jour des joueurs et envoie d'un signal de fin de partie.`,
-        );
+        if (fileLogger)
+          fileLogger.log(
+            `Mise à jour des joueurs et envoie d'un signal de fin de partie.`,
+          );
         gameData.data.logs.push("Victoire collective des joueurs !");
 
         socket.to(gameData.roomId).emit("gameEnd", { gameData });
       }
       if (!winParams.applyOnAllPlayers && victory) {
-        if (fileLogger) fileLogger.log(
-          ` Victoire individuelle, gagnants: ${winners.map((w) => w.id).join(",")}`,
-        );
+        if (fileLogger)
+          fileLogger.log(
+            ` Victoire individuelle, gagnants: ${winners.map((w) => w.id).join(",")}`,
+          );
         if (!Array.isArray(gameData.data.winners.value)) {
           gameData.data.winners.value = [];
         }
@@ -533,9 +563,10 @@ export default class Evaluator {
         for (let p of winners) {
           p.haswin.value = true;
 
-          if (fileLogger) fileLogger.log(
-            ` Joueur ${p.id} a gagné, mise à jour de son objet joueur. et envoie d'un signal`,
-          );
+          if (fileLogger)
+            fileLogger.log(
+              ` Joueur ${p.id} a gagné, mise à jour de son objet joueur. et envoie d'un signal`,
+            );
 
           PlayerManager.updatePlayerObject(p, gameData);
           let newGameData = roomManager.getRoom(gameData.roomId);
@@ -546,7 +577,8 @@ export default class Evaluator {
         }
       }
       if (PlayerManager.allPlayerHasFinished(gameData)) {
-        if (fileLogger) fileLogger.log(" Tous les joueurs ont terminé, fin de partie.");
+        if (fileLogger)
+          fileLogger.log(" Tous les joueurs ont terminé, fin de partie.");
         gameData.data.state.value = "endOfGame";
         for (let p of gameData.data.players) {
           if (!p.haswin.value) {
@@ -558,7 +590,8 @@ export default class Evaluator {
         socket.to(gameData.roomId).emit("gameEnd", { gameData });
       }
     } else {
-      if (fileLogger) fileLogger.log(" Pas de boucle, évaluation directe de la condition");
+      if (fileLogger)
+        fileLogger.log(" Pas de boucle, évaluation directe de la condition");
       let result = Parser.translateInnerExpression(
         winParams.condition,
         gameData,
@@ -568,7 +601,8 @@ export default class Evaluator {
       );
       if (fileLogger) fileLogger.log(` Résultat de la condition: ${result}`);
       if (result) {
-        if (fileLogger) fileLogger.log(` Condition de victoire remplie, fin de partie.`);
+        if (fileLogger)
+          fileLogger.log(` Condition de victoire remplie, fin de partie.`);
         gameData.data.state.value = "endOfGame";
         for (let p of gameData.data.players) {
           p.haswin.value = true;

@@ -137,7 +137,7 @@ export default class VariableType extends TypeInterface {
     let value = null;
     if (!Array.isArray(list)) return null;
     for (let i = 0; i < list.length; i++) {
-      let elt = list[i]; 
+      let elt = list[i];
 
       if (params && params.fileLogger) {
         params.fileLogger.log(
@@ -157,6 +157,8 @@ export default class VariableType extends TypeInterface {
           value = PlayerManager.getStartPlayer(gameData);
         } else if (elt === "allPlayersInGame") {
           value = gameData.data.players;
+        } else if (elt === "topDiscardCard") {
+          value = gameData.data.discardDeck[0]?.addedAttributs;
         } else if (elt === "currentPlayer") {
           if (params.currentPlayer == null) {
             const msg = `Missing params.currentPlayer for access to 'currentPlayer' in VariableType.splitLogicalList (element=${elt})`;
@@ -214,9 +216,25 @@ export default class VariableType extends TypeInterface {
               );
             } catch (e) {}
           }
+        }else if (elt === "playerCard") {
+          if (params.playerCard !== null) {
+            value = params.playerCard;
+          }
+          if (params.playerCard === null) {
+            const msg = `Missing params.playerCard when accessing 'playerCard' in VariableType (element=${elt})`;
+            variableLogger.error(msg);
+            LoggerClass.logFileLocalisation();
+            try {
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
+            } catch (e) {}
+          }
         } else {
-        
-          value = TypeManager.isDefined(gameData.data[elt]) ? gameData.data[elt] : null;
+          value = TypeManager.isDefined(gameData.data[elt])
+            ? gameData.data[elt]
+            : null;
 
           if (params && params.fileLogger) {
             params.fileLogger.log(
@@ -253,7 +271,7 @@ export default class VariableType extends TypeInterface {
 
             if (!TypeManager.isDefined(value)) {
               const msg = `${elt} property is null in params and data in VariableType.splitLogicalList`;
-               
+
               if (params && params.fileLogger) {
                 params.fileLogger.error(msg);
               }
@@ -267,14 +285,14 @@ export default class VariableType extends TypeInterface {
                   msg + ` (elt=${elt})`,
                   LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
                 );
-              } catch (e) {} 
+              } catch (e) {}
               return null;
             }
           }
         }
       } else {
         value = value[elt];
-        if (!TypeManager.isDefined(value) || value == null) {
+        if (!TypeManager.isDefined(value) || value == null) {
           console.warn(
             elt +
               " property is null search :" +

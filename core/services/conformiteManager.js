@@ -30,8 +30,7 @@ export class ConformiteManager {
     this.compareObject(roomData, schema);
     this.verifyParams(roomData.params);
     this.verifyDemon(roomData.events.demons);
-    this.verifyEvent(roomData.events.events);
-    this.verifyEvent(roomData.events.withValueEvent);
+    this.verifyEvent(roomData.events.events); 
     this.verifyEditionHistory(roomData.editionHistory);
     this.verifyGlobalValueOfPlayer(roomData.globalValueOfPlayer);
     this.verifyGlobalValue(roomData.globalValue);
