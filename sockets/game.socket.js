@@ -36,19 +36,21 @@ export default class GameSocket {
       GameManager.engine(gameData, socket, { event: "startGame" });
     });
 
-    socket.on("doAction", ({ action, actionType }) => {
+    socket.on("doAction", ({ action, actionType ,params}) => {
       let roomId = socket.data.roomId;
       let gameData = roomManager.getRoom(roomId);
 
       if (!gameData) {
         GameDataError.notFound(socket, roomId);
         return;
-      }
+      } 
+      console.log(params);
       GameManager.engine(gameData, socket, {
         event: "doAction",
         action: action,
         actionType: actionType,
         playerId: socket.data.playerId,
+        ...params
       });
     });
 

@@ -47,6 +47,7 @@ export default class Evaluator {
       evaluatorLogger.info(
         "Load Demon with params : " + JSON.stringify(params),
       );
+      params.location = fileLogger;
       if (fileLogger) {
         evaluatorLogger.info(
           `[fileLogger] Log file created: ${fileLogger.filepath}`,
@@ -235,27 +236,58 @@ export default class Evaluator {
       }
     }
     let actions = gameData.roomInDb.params.tours.actions;
+    if (fileLogger) {
+      fileLogger.log("--- CONTEXTE DES ACTIONS ---");
+      fileLogger.log(LoggerClass.pretty(actions));
+      fileLogger.log("Deck : ");
+      fileLogger.log(LoggerClass.pretty(gameData.data.deck));
+      fileLogger.log("Discard Deck : ");
+      fileLogger.log(LoggerClass.pretty(gameData.data.discardDeck));
+    }
     let currentPlayerId = PlayerManager.getPlayerWhoHasToPlay(gameData).id;
-    for (let p of gameData.data.players) {
-      evaluatorLogger.info("search actions for player ID=" + p.id);
-
-      if (fileLogger) fileLogger.log(`search actions for player ID=${p.id}`);
+    for (let pIndex = 0; pIndex < gameData.data.players.length; pIndex++) {
+      let p = gameData.data.players[pIndex];
+      if (fileLogger) {
+        fileLogger.log(
+          `\n[BOUCLE JOUEUR] Etude du joueur #${pIndex + 1} (ID=${p.id}, pseudo=${p.pseudo})`,
+        );
+        fileLogger.log(LoggerClass.pretty(p));
+      }
       let player = structuredClone(p);
       player.actions.value = [];
 
-      for (let a of actions) {
+      for (let aIndex = 0; aIndex < actions.length; aIndex++) {
+        let a = actions[aIndex];
+        if (fileLogger) {
+          fileLogger.log(
+            `\n  [ACTION] Etude de l'action #${aIndex + 1} : ${a.name || "unnamed"}`,
+          );
+          fileLogger.log(`Paramètres de l'action : ${LoggerClass.pretty(a)}`);
+        }
         let resultOFCondition = null;
         if (a.condition) {
+          if (fileLogger) {
+            fileLogger.log(`[CONDITION] Condition à évaluer : ${a.condition}`);
+            fileLogger.log(
+              `Paramètres utilisés : currentPlayer=${currentPlayerId}`,
+            );
+          }
           resultOFCondition = Parser.translateInnerExpression(
             a.condition,
             gameData,
             {
               currentPlayer: currentPlayerId,
+              location: fileLogger,
             },
           );
           if (fileLogger)
             fileLogger.log(
-              `Action condition for ${a.name || "unnamed"}: ${JSON.stringify(resultOFCondition)}`,
+              `[RESULTAT CONDITION] Résultat de la condition pour ${a.name || "unnamed"} : ${JSON.stringify(resultOFCondition)}`,
+            );
+        } else {
+          if (fileLogger)
+            fileLogger.log(
+              "    [CONDITION] Pas de condition, action toujours possible.",
             );
         }
 
@@ -267,30 +299,129 @@ export default class Evaluator {
         ) {
           player.actions.value.push(a);
           if (fileLogger)
-            fileLogger.log(`Action added: ${a.name || "unnamed"}`);
+            fileLogger.log(
+              `[ACTION AJOUTEE] Action ajoutée à la liste du joueur : ${a.name || "unnamed"}`,
+            );
+
+          // Gestion des actions sur la main
           if (a.actionOnHand && a.conditionOfCardSelection) {
-            for (let cardId of player.handDeck.value) {
+            if (fileLogger)
+              fileLogger.log(
+                `[ACTION SUR MAIN] Vérification des cartes de la main pour l'action : ${a.name || "unnamed"}`,
+              );
+            fileLogger.log(
+              `  [CONDITION CARTE] Condition à évaluer : ${a.conditionOfCardSelection} ============================================`,
+            );
+            for (
+              let cardIndex = 0;
+              cardIndex < player.handDeck.value.length;
+              cardIndex++
+            ) {
+              let cardId = player.handDeck.value[cardIndex];
               let card = gameData.data.cards[cardId];
               if (card) {
+           
                 let result = Parser.translateInnerExpression(
                   a.conditionOfCardSelection,
                   gameData,
                   {
                     currentPlayer: currentPlayerId,
-                    playerCard: card,
+                    playerCard: card.addedAttributs,
+                    location: fileLogger,
                   },
                 );
+                if (fileLogger) 
+                  fileLogger.log(
+                    `  [${result}] Etude de la carte #${cardIndex + 1} (ID=${cardId}) : ${LoggerClass.pretty(card)}`,
+                  );
+                
                 if (!player.cardsSelectableForActionOnHand) {
                   player.cardsSelectableForActionOnHand = { value: [] };
                 }
-                player.cardsSelectableForActionOnHand.value.push(cardId);
+                if (result) {
+                  player.cardsSelectableForActionOnHand.value.push(cardId);
+                }
+              } else {
+                if (fileLogger)
+                  fileLogger.log(
+                    `  [CARTE] Carte non trouvée pour l'ID : ${cardId}`,
+                  );
               }
             }
-            if(fileLogger)
-              fileLogger.log(`Cards selectable for action on hand: ${JSON.stringify(player.cardsSelectableForActionOnHand)}`);
+            if (fileLogger)
+              fileLogger.log(
+                `[RESULTAT ACTION SUR MAIN] Cartes sélectionnables pour l'action sur main : ${JSON.stringify(player.cardsSelectableForActionOnHand)}`,
+              );
+              fileLogger.log(
+              `  [FIN CONDITION CARTE] ${a.conditionOfCardSelection} ============================================`,
+            );
           }
+          // Gestion des actions sur le deck (exemple, à adapter si besoin)
+          if (a.actionOnDeck && a.conditionOfDeckSelection) {
+            if (fileLogger)
+              fileLogger.log(
+                `[ACTION SUR DECK] Vérification des cartes du deck pour l'action : ${a.name || "unnamed"}`,
+              );
+            for (
+              let cardIndex = 0;
+              cardIndex < player.deck.value.length;
+              cardIndex++
+            ) {
+              let cardId = player.deck.value[cardIndex];
+              let card = gameData.data.cards[cardId];
+              if (card) {
+                if (fileLogger) {
+                  fileLogger.log(
+                    `  [CARTE DECK] Etude de la carte #${cardIndex + 1} (ID=${cardId}) : ${LoggerClass.pretty(card)}`,
+                  );
+                  fileLogger.log(
+                    `  [CONDITION DECK] Condition à évaluer : ${a.conditionOfDeckSelection}`,
+                  );
+                }
+                let result = Parser.translateInnerExpression(
+                  a.conditionOfDeckSelection,
+                  gameData,
+                  {
+                    currentPlayer: currentPlayerId,
+                    playerCard: card,
+                    location: fileLogger,
+                  },
+                );
+                if (fileLogger)
+                  fileLogger.log(
+                    `  [RESULTAT CONDITION DECK] Résultat : ${JSON.stringify(result)}`,
+                  );
+                if (!player.cardsSelectableForActionOnDeck) {
+                  player.cardsSelectableForActionOnDeck = { value: [] };
+                }
+                player.cardsSelectableForActionOnDeck.value.push(cardId);
+                if (fileLogger)
+                  fileLogger.log(
+                    `  [ACTION SUR DECK] Carte ajoutée comme sélectionnable pour l'action : ${cardId}`,
+                  );
+              } else {
+                if (fileLogger)
+                  fileLogger.log(
+                    `  [CARTE DECK] Carte non trouvée pour l'ID : ${cardId}`,
+                  );
+              }
+            }
+            if (fileLogger)
+              fileLogger.log(
+                `[RESULTAT ACTION SUR DECK] Cartes sélectionnables pour l'action sur deck : ${JSON.stringify(player.cardsSelectableForActionOnDeck)}`,
+              );
+          }
+        } else {
+          if (fileLogger)
+            fileLogger.log(
+              `[ACTION NON AJOUTEE] Condition non remplie ou ce n'est pas le tour du joueur.`,
+            );
         }
       }
+      if (fileLogger)
+        fileLogger.log(
+          `[FIN JOUEUR] Actions finales pour le joueur ${player.id} : ${LoggerClass.pretty(player.actions.value)}`,
+        );
       PlayerManager.updatePlayerObject(player, gameData);
     }
   }

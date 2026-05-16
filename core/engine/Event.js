@@ -407,8 +407,14 @@ export default class Event {
       gameData.data.testLogs.push(actionObject.getActionEventForTest());
     }
     if (event.loadMessage) {
-      gameData.data.logs.push(event.loadMessage);
-      socket.to(gameData.roomId).emit("updateGameDataLogs", event.loadMessage);
+      let message = Parser.translateInnerExpressionWithPlainText(
+        event.loadMessage,
+        gameData,
+        params,
+      );
+      eventLogger.info("Event load message : " + message);
+      gameData.data.logs.push(message);
+      socket.to(gameData.roomId).emit("updateGameDataLogs", message);
     }
 
     // to execute if event doesnot wait answer from player

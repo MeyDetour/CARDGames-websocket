@@ -57,7 +57,7 @@ export default class Action {
       executionDate: new Date(),
       ...event,
     };
-    
+
     const actionLogger = Logger("Action Event ID=" + this.event?.id);
     this.actionLogger = actionLogger;
 
@@ -420,6 +420,7 @@ export default class Action {
 
   giveElementsTo() {
     if (this.fileLogger) {
+      this.fileLogger.log("GiveElementTo , called with element :"+LoggerClass.getKeyOfObject(this.params));
       LoggerClass.logGridFromObject(
         {
           Sender: typeof this.sender,
@@ -439,8 +440,8 @@ export default class Action {
 
       LoggerClass.logGridFromObject(
         {
-          Destinataire: this.destinataire,
           Sender: this.sender,
+          Destinataire: this.destinataire,
         },
         "AVANT GiveElementTo ",
         this.fileLogger,
@@ -686,9 +687,116 @@ export default class Action {
           }
         }
       }
+      //IF WE WANT TO GIVE FIXE ELEMENT
+      if (Array.isArray(sum)) {
+        // Debut des logs de fin d'action
+        if (this.fileLogger) {
+          this.fileLogger.log("Sum : " + JSON.stringify(sum));
+        }
 
+        // if sender but sender value is not array
+        if (
+          TypeManager.isDefined(senderObject) &&
+          TypeManager.getType(senderObject.value) !== "array"
+        ) {
+          const msg =
+            "Try to give elements but senderObject value is not an array. Got type: " +
+            typeof sum +
+            " with value: " +
+            JSON.stringify(sum) +
+            "Error in key " +
+            key;
+          this.actionLogger.error(msg);
+          LoggerClass.logFileLocalisation();
+          if (this.fileLogger) {
+            this.fileLogger.error(
+              new Error(msg),
+              "actions.js → giveElementsTo()",
+            );
+          }
+          errorStack.addError(
+            msg,
+            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+          );
+          return;
+        } // if destinataire  but destinataire value is not array
+        if (
+          TypeManager.isDefined(destinataireObject) &&
+          TypeManager.getType(destinataireObject.value) !== "array"
+        ) {
+          const msg =
+            "Try to give elements but destinataireObject value is not an array. Got type: " +
+            typeof sum +
+            " with value: " +
+            JSON.stringify(sum) +
+            "Error in key " +
+            key;
+          this.actionLogger.error(msg);
+          LoggerClass.logFileLocalisation();
+          if (this.fileLogger) {
+            this.fileLogger.error(
+              new Error(msg),
+              "actions.js → giveElementsTo()",
+            );
+          }
+          errorStack.addError(
+            msg,
+            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+          );
+          return;
+        }
+
+        // IF THERE IS SENDER, remove to sender
+        if (
+          TypeManager.isDefined(senderObject) &&
+          TypeManager.getType(senderObject.value) === "array"
+        ) {
+          // throw away only element that sender have in his value
+          senderObject.value = senderObject.value.filter(
+            (elt) => !sum.includes(elt),
+          );
+
+          // SAVE ACTION LOG FOR TEST
+          if (this.gameData.data.isTest) {
+            this.actionEventForTest.diffs.push({
+              key: PlayerManager.isPlayerType(this.sender, this.gameData)
+                ? this.sender.pseudo
+                : this.event.event.from,
+              type: "array",
+              id: "givea6566rrayraayr5454",
+              before: structuredClone(senderObjectSave.value),
+              after: structuredClone(senderObject.value),
+            });
+          }
+        } // IF THERE IS SENDER, remove to sender
+        if (
+          TypeManager.isDefined(destinataireObject) &&
+          TypeManager.getType(destinataireObject.value) === "array"
+        ) {
+          // throw away only element that sender have in his value
+          destinataireObject.value = destinataireObject.value.concat(sum);
+
+          // SAVE ACTION LOG FOR TEST
+          if (this.gameData.data.isTest) {
+            this.actionEventForTest.diffs.push({
+              key: PlayerManager.isPlayerType(this.sender, this.gameData)
+                ? this.sender.pseudo
+                : this.event.event.from,
+              type: "array",
+              id: "receivearr465ayraayr5454",
+              before: structuredClone(destinataireObjectSave.value),
+              after: structuredClone(destinataireObject.value),
+            });
+          }
+        }
+ 
+      }
       // IF WE WANT TO GIVE A SPECIFIC QUANTITY
-      if (!exceptions.includes(sum)) {
+      if (
+        !exceptions.includes(sum) &&
+        (TypeManager.getType(sum) === "string" ||
+          TypeManager.getType(sum) === "number")
+      ) {
         sum = parseInt(sum);
 
         // IF SUM IS NOT A NUMBER
@@ -861,7 +969,8 @@ export default class Action {
             });
           }
         }
-      }// END  IF WE WANT TO GIVE A SPECIFIC QUANTITY
+      } 
+      // END OF  IF WE WANT TO GIVE A SPECIFIC QUANTITY
 
       // SAVER
       PlayerManager.updatePlayerObject(
@@ -919,7 +1028,7 @@ export default class Action {
 
         this.actionLogger.info("Effectué ");
         this.fileLogger.log("✅ GiveElementsTo effectué.");
-      }// fin logs de resultats
+      } // fin logs de resultats
     }
   }
 }

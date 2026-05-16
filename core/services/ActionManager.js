@@ -8,9 +8,9 @@ import PlayerManager from "./PlayerManager.js";
 
 const actionManagerLogger = Logger("CardManager")
 export default class ActionManager {
-    static getActionFromName(gameData, actionName) {
+    static getActionFromId(gameData, actionId) {
         for (let action of gameData.roomInDb.params.tours.actions) {
-            if (action.name === actionName) {
+            if (action.id === actionId) {
                 return action;
             }
         }
@@ -23,7 +23,7 @@ export default class ActionManager {
        * @param {Object} action - définition d'action (peut contenir withValue)
        * @param {number} playerId - id du joueur cible
        */
-      static applyCurrentPlayerAction(gameData, socket, action, playerId) {
+      static applyCurrentPlayerAction(gameData, socket, action, playerId,params) {
         const fileLogger = FileLogger.create([
           "LOAD CURRENT PLAYER ACTION",
           "=====================",
@@ -36,12 +36,13 @@ export default class ActionManager {
         fileLogger.log("Load Current Player Action ...");
         LoggerClass.objectToString(action);
         let currentPlayer = PlayerManager.getPlayerWithId(gameData, playerId);
-        const params = {
+        const paramsComplete = {
           currentPlayer: playerId,
+          ...params
         };
         let canDoAction = action.condition
           ? Parser.translateInnerExpression(action.condition, gameData, {
-              ...params,
+              ...paramsComplete,
               log: false,
             })
           : true;
@@ -56,7 +57,7 @@ export default class ActionManager {
           fileLogger.log("Load current player action");
           for (let event of action.withValue) {
             fileLogger.log(`Apply with value event: ${JSON.stringify(event)}`);
-            Event.applyWithValueEvent(event, socket, gameData, params);
+            Event.applyWithValueEvent(event, socket, gameData, paramsComplete);
           }
         } else {
           actionManagerLogger.error("Cannot do action for current player ");

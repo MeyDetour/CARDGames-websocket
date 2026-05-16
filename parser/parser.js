@@ -130,6 +130,9 @@ export default class Parser {
       const msg = `Syntax error in expression: "${str}" — check braces/parentheses balance`;
       parserLogger.error(msg);
       LoggerClass.logFileLocalisation();
+      if (params.fileLogger) {
+        params.fileLogger.error(msg);
+      }
       try {
         errorStack.addError(
           msg,
@@ -261,6 +264,9 @@ export default class Parser {
     if (!TypeManager.isDefined(str)) {
       const msg = "str is undefined in parser ";
       eventLogger.error(msg);
+      if (params.fileLogger) {
+        params.fileLogger.error(msg);
+      }
       LoggerClass.logFileLocalisation();
       errorStack.addError(
         msg,
@@ -273,33 +279,65 @@ export default class Parser {
     return str;
   }
 
-   static verifyExpressionSyntax(str) {
+  static translateInnerExpressionWithPlainText(str, gameData, params = {}) {
+    let text = [];
+    let currentPart = "";
+    let startListenText = false;
+    let startListenExpression = false;
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i];
+
+      // si ouverture ou fermeture de guillemet
+      if (c == `"`) {
+        // si c'est une ouverture de guillemet, et qu'on a deja du contenu alors c'est une expression qui est dans current part
+        if (!startListenText && currentPart) {
+          let textFromExpression = String(
+            Parser.translateInnerExpression(currentPart, gameData, params),
+          );
+          text.push(textFromExpression);
+          currentPart = "";
+        }
+        // alors c'est la fermeture
+        if (startListenText) {
+          text.push(currentPart);
+          currentPart = "";
+        }
+        // on ferme si c'est ouvert, on ouvre si c'est fermé
+        startListenText = !startListenText;
+        continue;
+      }
+      // si on est en plein texte et que guillemet ouvert alors on stocke la chaine de caractere
+      currentPart += c;
+    }
+    if (currentPart) {
+      text.push(currentPart);
+    }
+    return text.join("");
+  }
+  static verifyExpressionSyntax(str) {
     let expression = "";
     let isInVariable = false;
     let depth = 0;
-    let lastChar = "";
+
     for (let i = 0; i < str.length; i++) {
       const c = str[i];
 
       if (c === "{") {
         depth++;
         isInVariable = true;
-        lastChar = c;
         continue;
       }
       if (c === "(") {
         depth++;
-        lastChar = c;
         continue;
       }
       // si on est a la fin d'une variable on va verifier le contenu
-      if (c === "}"&& lastChar === "{") {
+      if (c === "}") {
         depth--;
-        lastChar = null;
         // contenu =  aaa#bbb#ccc
         // si contenu = a#   ou #b  on aura ["a",""] ou ["","b"] et c'est pas bon
         if (expression.includes("#")) {
-          const parts = expression.split("#"); 
+          const parts = expression.split("#");
           if (parts.length < 2 || parts.some((p) => p.trim() === "")) {
             return false;
           }
@@ -307,9 +345,8 @@ export default class Parser {
         isInVariable = false;
         continue;
       }
-      if (c === ")" && lastChar === "(") {
+      if (c === ")") {
         depth--;
-        lastChar = null;
         continue;
       }
       if (isInVariable) {
@@ -322,7 +359,6 @@ export default class Parser {
 
     return true;
   }
-
   static getDepthIndentation(count) {
     return " ".repeat(count + 1);
   }

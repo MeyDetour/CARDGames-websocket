@@ -170,14 +170,14 @@ export default class GameManager {
             params.action,
           )
         ) {
+          console.log(params)
           ActionManager.applyCurrentPlayerAction(
             gameData,
             socket,
-            ActionManager.getActionFromName(gameData, params.action),
+            ActionManager.getActionFromId(gameData, params.action),
             params.playerId,
-          );
-
-          console.log(gameData.data.state.value);
+            params
+          ); 
           if (
        (     params.actionType
               ? params.actionType != "askPlayer"

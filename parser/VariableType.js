@@ -157,8 +157,15 @@ export default class VariableType extends TypeInterface {
           value = PlayerManager.getStartPlayer(gameData);
         } else if (elt === "allPlayersInGame") {
           value = gameData.data.players;
-        } else if (elt === "topDiscardCard") {
-          value = gameData.data.discardDeck[0]?.addedAttributs;
+        } else if (elt === "topDiscardCard") { 
+          if (!gameData.data.discardDeck || gameData.data.discardDeck.value.length === 0) {
+          return null;
+          }
+          let cardId = gameData.data.discardDeck.value[0];
+          let card = gameData.data.cards[cardId];
+          if (card) {
+            value = card.addedAttributs ?? {};
+          }
         } else if (elt === "currentPlayer") {
           if (params.currentPlayer == null) {
             const msg = `Missing params.currentPlayer for access to 'currentPlayer' in VariableType.splitLogicalList (element=${elt})`;
@@ -216,7 +223,7 @@ export default class VariableType extends TypeInterface {
               );
             } catch (e) {}
           }
-        }else if (elt === "playerCard") {
+        } else if (elt === "playerCard") {
           if (params.playerCard !== null) {
             value = params.playerCard;
           }

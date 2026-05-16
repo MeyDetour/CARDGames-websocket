@@ -241,9 +241,13 @@ class RoomManager {
 
     if (gameData) {
       if (this.isFullRoom(gameData) && !isSpectator) {
-        new AppError(socket, "La partie est déjà pleine, vous ne pouvez pas la rejoindre");
-        return
-      } if (this.isFullRoom(gameData) && isSpectatorAuthorized) {
+        new AppError(
+          socket,
+          "La partie est déjà pleine, vous ne pouvez pas la rejoindre",
+        );
+        return;
+      }
+      if (this.isFullRoom(gameData) && isSpectatorAuthorized) {
         isSpectator = true;
       }
       socket.join(roomID);
@@ -272,7 +276,9 @@ class RoomManager {
           content: pseudo + " observe la partie",
         });
         socket.emit("roomJoinedAsSpectator", { gameData, player });
-        socket.to(roomID).emit("playerHasJoinedRoomAsSpectator", {gameData,player});
+        socket
+          .to(roomID)
+          .emit("playerHasJoinedRoomAsSpectator", { gameData, player });
       } else {
         gameData.data.players.push(player);
         MessagerieManager.addMessage(gameData, socket, {
@@ -281,7 +287,7 @@ class RoomManager {
         PlayerManager.reORderPlayerPosition(gameData);
 
         socket.emit("roomJoined", { gameData, player });
-        socket.to(roomID).emit("playerHasJoinedRoom", {gameData,player});
+        socket.to(roomID).emit("playerHasJoinedRoom", { gameData, player });
       }
     } else {
       const msg = "Join room failed: Id incorrect -> " + roomID;
@@ -326,10 +332,10 @@ class RoomManager {
     gameData.data.currentPlayerPosition.value = 1;
     gameData.data.tour = 0;
     gameData.data.manche = 0;
-    ((gameData.data.deck.value = Object.keys(
+    gameData.data.deck.value = Object.keys(
       gameData.roomInDb.assets.cards,
-    ).map((key) => parseInt(key))),
-      (gameData.data.discardDeck.value = []));
+    )
+        gameData.data.discardDeck.value = [];
 
     if (gameData.data.isTest) {
       GameManager.engine(gameData, socket, { event: "startGame" });
