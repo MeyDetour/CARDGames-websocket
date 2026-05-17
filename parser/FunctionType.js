@@ -3,6 +3,7 @@ import Parser from "./parser.js";
 import Conditions from "../core/engine/Evaluator.js";
 import PlayerManager from "../core/services/PlayerManager.js";
 import { LoggerClass } from "../core/logger/logger.js";
+import {TypeManager} from "../core/services/helper/TypeManager.js";
 
 export default class FunctionType extends TypeInterface {
   static removeTag(exp) {
@@ -14,6 +15,10 @@ export default class FunctionType extends TypeInterface {
     }
     if (exp.startsWith("len(")) {
       return exp.substring(4, exp.length - 1);
+    }if (exp.startsWith("not(")) {
+      return exp.substring(4, exp.length - 1);
+    }if (exp.startsWith("exist(")) {
+      return exp.substring(6, exp.length - 1);
     }
     return exp;
   }
@@ -64,6 +69,59 @@ export default class FunctionType extends TypeInterface {
       let result = 0;
       if (typeof value === "string" || Array.isArray(value)) {
         result = value.length;
+      }
+      if (params.fileLogger) {
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) +
+            `FunctionType result: ${result}`,
+        );
+      }
+      return result;
+    }
+    if (str.startsWith("not(")) {
+      // enlever le tag apres avoir verifier dans quel if renvoyer l'expression, ne pas fusionner avec les autres
+      str = FunctionType.removeTag(str);
+      let value = Parser.translateInnerExpression(str, gameData, {
+        ...params,
+        depth: params.depth + 10,
+      });
+      if (params.fileLogger) {
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) +
+            `Action is not() with value : ${value}   `,
+        );
+      }
+      let result = null;
+      if (TypeManager.getType(value) === "boolean") {
+        result = !value;
+      }
+      if (params.fileLogger) {
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) +
+            `FunctionType result: ${result}`,
+        );
+      }
+      return result;
+    }
+    if (str.startsWith("exist(")) {
+      // enlever le tag apres avoir verifier dans quel if renvoyer l'expression, ne pas fusionner avec les autres
+      str = FunctionType.removeTag(str);
+      let value = Parser.translateInnerExpression(str, gameData, {
+        ...params,
+        depth: params.depth + 10,
+      });
+      if (params.fileLogger) {
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) +
+            `Action is exist() with value : ${value}   `,
+        );
+      }
+      let result = null;
+      if (TypeManager.isDefined(value)) {
+        result =true
+      }
+      else{
+        result = false;
       }
       if (params.fileLogger) {
         params.fileLogger.log(

@@ -90,18 +90,7 @@ export default class Event {
       params = {};
       eventLogger.debug("No params provided, initializing empty params object");
     }
-    let conditionOfEvent = Parser.translateInnerExpression(
-      event.condition,
-      gameData,
-      { ...params },
-    );
-
-    if (conditionOfEvent === false) {
-      const msg = `Event ${event.id} condition is false, skipping execution. Condition: ${event.condition}`;
-      eventLogger.warn(msg);
-      return;
-    }
-
+   
     const globalEventLog = true;
     const globalEventDetailLog = true;
 
@@ -127,6 +116,19 @@ export default class Event {
       fileLogger.log(LoggerClass.pretty(event));
       params.location = fileLogger;
     }
+    
+     let conditionOfEvent = Parser.translateInnerExpression(
+      event.condition,
+      gameData,
+      { ...params},
+    );
+
+    if (conditionOfEvent === false) {
+      const msg = `Event ${event.id} condition is false, skipping execution. Condition: ${event.condition}`;
+      eventLogger.warn(msg);
+      return;
+    }
+
 
     LoggerClass.objectToString(event);
     let action = this.getAction(event, gameData);

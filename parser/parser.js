@@ -30,7 +30,12 @@ export default class Parser {
       return "comparaison";
     } else if (exp.startsWith("{")) {
       return "variable";
-    } else if (exp.startsWith("getPlayer(") || exp.startsWith("len(")) {
+    } else if (
+      exp.startsWith("getPlayer(") ||
+      exp.startsWith("len(") ||
+      exp.startsWith("not(") ||
+      exp.startsWith("exist(")
+    ) {
       return "function";
     } else if (exp.startsWith("<<")) {
       return "value";
@@ -77,6 +82,9 @@ export default class Parser {
     }
     if (!TypeManager.isDefined(str)) {
       return null;
+    }
+    if (typeof str == "string") {
+      str = str.replaceAll(/[\[\]&]+/g, "");
     }
     let type = Parser.getType(str, gameData);
     // CREATE LOG FILE FOR THIS EXPRESSION
