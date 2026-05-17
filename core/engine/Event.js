@@ -20,6 +20,8 @@ const eventLogger = Logger("Event");
  * les différents types d'événements (boucles, event, actions, etc.).
  */
 export default class Event {
+  // Stocke le nombre d'appels par event.id
+  static _eventCallCounts = {};
   /**
    * Cherche un event par son id et l'exécute.
    * @param {number|string} id - Identifiant de l'événement
@@ -66,6 +68,22 @@ export default class Event {
     params = {},
     typeOfEvent = "event",
   ) {
+    // Limite d'appel par event.id
+    if (!event || !event.id) {
+      eventLogger.error("Event object or event.id is undefined");
+      return null;
+    }
+    if (!Event._eventCallCounts[event.id]) {
+      Event._eventCallCounts[event.id] = 0;
+    }
+    Event._eventCallCounts[event.id]++;
+    if (Event._eventCallCounts[event.id] > 20) {
+      eventLogger.error(`Event ID ${event.id} called more than 20 times. Execution stopped.`);
+      if (socket && typeof socket.emit === 'function') {
+        socket.emit("eventLimitReached", { eventId: event.id, message: `Event ID ${event.id} called more than 20 times. Execution stopped.` });
+      }
+      return null;
+    }
     if (!gameData) {
       eventLogger.error("Game Data is undefined");
       LoggerClass.logFileLocalisation();
@@ -90,7 +108,7 @@ export default class Event {
       params = {};
       eventLogger.debug("No params provided, initializing empty params object");
     }
-   
+
     const globalEventLog = true;
     const globalEventDetailLog = true;
 
@@ -116,19 +134,25 @@ export default class Event {
       fileLogger.log(LoggerClass.pretty(event));
       params.location = fileLogger;
     }
-    
-     let conditionOfEvent = Parser.translateInnerExpression(
+
+    let conditionOfEvent = Parser.translateInnerExpression(
       event.condition,
       gameData,
-      { ...params},
+      { ...params },
     );
 
     if (conditionOfEvent === false) {
+      gameData.data.testLogs.push({
+        testType: typeOfEvent,
+        diffs: [],
+        conditionResult : conditionOfEvent,
+        executionDate: new Date(),
+        ...event,
+      });
       const msg = `Event ${event.id} condition is false, skipping execution. Condition: ${event.condition}`;
       eventLogger.warn(msg);
       return;
     }
-
 
     LoggerClass.objectToString(event);
     let action = this.getAction(event, gameData);
@@ -297,20 +321,20 @@ export default class Event {
       actionObject.setSenderListObject(senderListObject);
       actionObject.setSender(sender);
 
-      if(fileLogger){
-      LoggerClass.logGridFromObject(
-        {
-          Sender: sender,
-          "Sender List": senderListObject,
-          Destinataire: destinataire,
-          "Destinataire List": destinataireListObject,
-          Action: action,
-          GiveElements: giveElements,
-        },
-        `STUDY ELEMENT NOT IN BOUCLE`,
-        fileLogger,
-      );
-    }
+      if (fileLogger) {
+        LoggerClass.logGridFromObject(
+          {
+            Sender: sender,
+            "Sender List": senderListObject,
+            Destinataire: destinataire,
+            "Destinataire List": destinataireListObject,
+            Action: action,
+            GiveElements: giveElements,
+          },
+          `STUDY ELEMENT NOT IN BOUCLE`,
+          fileLogger,
+        );
+      }
       if (giveElements && destinataire) {
         actionObject.giveElementsTo(
           sender,
@@ -435,6 +459,11 @@ export default class Event {
           ...params,
         });
       }
+    }
+
+    // Nettoyage du compteur si l'exécution s'est bien passée
+    if (Event._eventCallCounts[event.id] > 0) {
+      Event._eventCallCounts[event.id]--;
     }
   }
 
@@ -681,8 +710,7 @@ export default class Event {
         }
         params[key] = newParam;
       }
-    } 
-
+    }
 
     // find event with id ======================================================
     eventLogger.info("Search WithValue Event  ID: " + shortWithValueEvent.id);
