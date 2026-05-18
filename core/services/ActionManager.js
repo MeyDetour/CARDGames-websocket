@@ -40,6 +40,14 @@ export default class ActionManager {
           currentPlayer: playerId,
           ...params
         };
+        if (!action){
+           actionManagerLogger.error("Action not found for current player");
+          fileLogger.error(
+            new Error("Action not found for current player"),
+            "ActionManager.js  -->  applyCurrentPlayerAction()",
+          ); 
+          return
+        }
         let canDoAction = action.condition
           ? Parser.translateInnerExpression(action.condition, gameData, {
               ...paramsComplete,
