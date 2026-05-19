@@ -5,6 +5,8 @@ import {errorStack} from "../error/ErrorStack.js";
 import Event from "../engine/Event.js";
 import Parser from "../../parser/parser.js";
 import PlayerManager from "./PlayerManager.js";
+import AppError from "../error/AppError.js";
+import { TypeManager } from "./helper/TypeManager.js";
 
 const actionManagerLogger = Logger("CardManager")
 export default class ActionManager {
@@ -45,13 +47,17 @@ export default class ActionManager {
           fileLogger.error(
             new Error("Action not found for current player"),
             "ActionManager.js  -->  applyCurrentPlayerAction()",
-          ); 
-          return
+          ); new AppError(
+                      socket,
+                      "Action not found for current player",
+                    );
+          return;
         }
         let canDoAction = action.condition
           ? Parser.translateInnerExpression(action.condition, gameData, {
               ...paramsComplete,
               log: false,
+              location : fileLogger
             })
           : true;
 
@@ -60,12 +66,12 @@ export default class ActionManager {
           console.error("player is not actif in game : cant do action");
         }
         fileLogger.log(`Can do action: ${canDoAction}`);
-        if (canDoAction && playerId) {
+        if (canDoAction && TypeManager.isDefined(playerId)) {
           actionManagerLogger.debug("Load current player action ");
           fileLogger.log("Load current player action");
           for (let event of action.withValue) {
             fileLogger.log(`Apply with value event: ${JSON.stringify(event)}`);
-            Event.applyWithValueEvent(event, socket, gameData, paramsComplete);
+            Event.applyWithValueEvent(event, socket, gameData, paramsComplete,"eventFromAction");
           }
         } else {
           actionManagerLogger.error("Cannot do action for current player ");

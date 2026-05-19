@@ -140,6 +140,9 @@ export default class Event {
       gameData,
       { ...params },
     );
+    if (!event.condition) {
+      conditionOfEvent = true;
+    }
 
     if (conditionOfEvent === false) {
       gameData.data.testLogs.push({
@@ -430,7 +433,8 @@ export default class Event {
     // sinon dans l'ordre d'execution on verra le withValue
     // avant l'execution de l'event principal et pas apres
     if (gameData.data.isTest) {
-      gameData.data.testLogs.push(actionObject.getActionEventForTest());
+      gameData.data.testLogs.push({ ...actionObject.getActionEventForTest(),
+        conditionResult : conditionOfEvent, });
     }
     if (event.loadMessage) {
       let message = Parser.translateInnerExpressionWithPlainText(
@@ -666,7 +670,7 @@ export default class Event {
    * @param {Object} params
    * @returns {null|void}
    */
-  static applyWithValueEvent(shortWithValueEvent, socket, gameData, params) {
+  static applyWithValueEvent(shortWithValueEvent, socket, gameData, params,typeOfEvent="event") {
     if (!shortWithValueEvent) {
       new AppError(socket, "shortWithValueEvent must be provided");
       eventLogger.warn("shortWithValueEvent must be provided");
@@ -742,6 +746,6 @@ export default class Event {
 
     //execute event         =====================================================
 
-    Event.ExecuteEvent(event, socket, gameData, { ...params }, "withValue");
+    Event.ExecuteEvent(event, socket, gameData, { ...params }, typeOfEvent);
   }
 }

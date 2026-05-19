@@ -5,6 +5,8 @@ import { roomManager } from "./RoomManager.js";
 import PlayerManager from "./PlayerManager.js";
 import ActionManager from "./ActionManager.js";
 import { io } from "../../server.js";
+import AppError from "../error/AppError.js";
+import { TypeManager } from "./helper/TypeManager.js";
 
 const gameLogger = Logger("Game");
 gameLogger.info("Logger démarrée");
@@ -160,7 +162,7 @@ export default class GameManager {
       params = this.changeCurrentPlayer(gameData, socket);
     }
     if (params.event && params.event === "doAction") {
-      if (params.action) {
+      if (TypeManager.isDefined(params.action)) {
         //apply action
         //verify player
         if (
@@ -170,18 +172,17 @@ export default class GameManager {
             params.action,
           )
         ) {
-          console.log(params)
+          console.log(params);
           ActionManager.applyCurrentPlayerAction(
             gameData,
             socket,
             ActionManager.getActionFromId(gameData, params.action),
             params.playerId,
-            params
-          ); 
+            params,
+          );
           if (
-       (     params.actionType
-              ? params.actionType != "askPlayer"
-              : true) && gameData.data.state.value !== "endOfGame"
+            (params.actionType ? params.actionType != "askPlayer" : true) &&
+            gameData.data.state.value !== "endOfGame"
           ) {
             params = this.changeCurrentPlayer(gameData, socket);
           }

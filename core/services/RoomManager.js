@@ -6,7 +6,8 @@ import AppError from "../error/AppError.js";
 import { MessagerieManager } from "./MessagerieManager.js";
 import { io } from "../../server.js";
 import { TypeManager } from "./helper/TypeManager.js";
-import GameManager from "./GameManager.js";
+import GameManager from "./GameManager.js"; 
+import CardManager from "./CardManager.js";
 
 const roomLogger = Logger("RoomManager");
 
@@ -153,7 +154,7 @@ class RoomManager {
 
         deck: {
           type: "cardList",
-          value: Object.keys(gameInDB.assets.cards),
+          value: CardManager.getReelCardList(gameInDB.assets.cards),
         },
         discardDeck: {
           type: "cardList",
