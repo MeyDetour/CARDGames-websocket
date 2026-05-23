@@ -87,6 +87,12 @@ export default class Parser {
       str = str.replaceAll(/[\[\]&]+/g, "");
     }
     let type = Parser.getType(str, gameData);
+    if (params.conditionDetailsForTest){
+      params.conditionDetailsForTest.originalExpression = str
+      params.conditionDetailsForTest.type = type
+      
+    }
+
     // CREATE LOG FILE FOR THIS EXPRESSION
     if (
       params.initialisation !== "true" &&

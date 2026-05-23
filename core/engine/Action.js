@@ -34,6 +34,7 @@ export default class Action {
     logs = {},
     params = {},
     testType = "event",
+    conditionDetailsForTest = null,
     index = null,
   ) {
     this.fileLogger = fileLogger;
@@ -54,6 +55,7 @@ export default class Action {
     this.actionEventForTest = {
       testType: testType,
       diffs: [],
+      conditionDetailsForTest: conditionDetailsForTest,
       executionDate: new Date(),
       ...event,
     };
@@ -140,7 +142,7 @@ export default class Action {
     // error is not exist
     if (!TypeManager.isDefined(this.destinataire)) {
       const msg =
-        "Cannot apply event <<skipPlayerTour>> without destinataire in event : " +
+        "Cannot shuffle without destinataire in event : " +
         this.event["name"] +
         " with ID=" +
         this.event["id"];
@@ -284,22 +286,47 @@ export default class Action {
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
     }
-    if (this.fileLogger) {
-      this.fileLogger.log(
-        `⏭️ Saut du tour du joueur dans l'événement ID=${this.event["id"]}`,
+    if (
+      !TypeManager.isDefined(this.value) ||
+      this.value === 0 ||
+      TypeManager.getType(this.value) !== "number"
+    ) {
+      const msg =
+        "Cannot apply event <<skipPlayerTour>> without value for action : " +
+        this.event["name"] +
+        "with ID=" +
+        this.event["id"];
+      this.actionLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      if (this.fileLogger) {
+        this.fileLogger.error(new Error(msg), "actions.js → skipPlayerTour()");
+      }
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
     }
-    let before = structuredClone(this.destinataire);
-    if (
-      this.destinataire &&
-      this.destinataire["attachedEventForTour"] &&
-      Array.isArray(this.destinataire["attachedEventForTour"]["value"])
-    ) {
-      this.destinataire["attachedEventForTour"]["value"].push("skipPlayerTour");
-    }
-    PlayerManager.updatePlayerObject(this.destinataire, this.gameData);
+    let actualPosition = gameData.data.currentPlayerPosition.value;
     if (this.fileLogger) {
-      LoggerClass.logGridOldNew(before, this.destinataire, this.fileLogger);
+      this.fileLogger.log(`Position actuelle du joueur : ${actualPosition}`);
+      this.fileLogger.log(`Valeur à ajouter : ${this.value}`);
+    }
+    // Value est le nombre de joueur à sauter,
+    // a la fin de la boucle actualPosition est un joueur à sauter aussi
+    // mais il est remplacer à la fin de la boucle par le joueur suivant
+    //  pour éviter de sauter un joueur en plus
+    for (let i = 0; i < this.value; i++) {
+      let p = getNextPlayer(this.gameData, actualPosition);
+      actualPosition = p.position;
+    }
+    if (this.fileLogger) {
+      this.fileLogger.log(
+        `Nouvelle position du joueur après ajout : ${actualPosition}`,
+      );
+    }
+    this.gameData.data.currentPlayerPosition.value = actualPosition;
+
+    if (this.fileLogger) {
       this.fileLogger.log("✅ Saut du tour effectué.");
     }
     this.actionLogger.info("Effectué");
@@ -420,7 +447,10 @@ export default class Action {
 
   giveElementsTo() {
     if (this.fileLogger) {
-      this.fileLogger.log("GiveElementTo , called with element :"+LoggerClass.getKeyOfObject(this.params));
+      this.fileLogger.log(
+        "GiveElementTo , called with element :" +
+          LoggerClass.getKeyOfObject(this.params),
+      );
       LoggerClass.logGridFromObject(
         {
           Sender: typeof this.sender,
@@ -458,7 +488,9 @@ export default class Action {
         key,
         this.gameData,
         null,
-      ); //  {gain#1} -> ['gain','1']
+      );
+      //  {gain#1} -> ['gain','1']
+      //  {cards} -> ['cards']
       if (this.fileLogger) {
         this.fileLogger.log("keyToTransform :");
         this.fileLogger.log(LoggerClass.pretty(keyToTransform));
@@ -467,11 +499,19 @@ export default class Action {
       //  INITIALIZED SENDER =======================
       let senderObject = null;
       if (TypeManager.isDefined(this.sender)) {
-        senderObject = VariableType.splitLogicalList(
-          [this.sender, ...keyToTransform],
-          this.gameData,
-          { returnType: "ref" },
-        );
+        if (keyToTransform[0] != "cards") {
+          senderObject = VariableType.splitLogicalList(
+            [this.sender, ...keyToTransform],
+            this.gameData,
+            { returnType: "ref" },
+          );
+        }else{
+          senderObject = VariableType.splitLogicalList(
+            [this.sender],
+            this.gameData,
+            { returnType: "ref" },
+          );
+        }
 
         if (!TypeManager.isDefined(senderObject)) {
           senderObject = this.sender;
@@ -481,12 +521,23 @@ export default class Action {
 
       // INITIALIZE DESTINATAIRE =================================
       let destinataireObject = null;
-      if (TypeManager.isDefined(this.destinataire)) {
-        destinataireObject = VariableType.splitLogicalList(
-          [this.destinataire, ...keyToTransform],
-          this.gameData,
-          { returnType: "ref", log: false },
-        );
+      if (
+        TypeManager.isDefined(this.destinataire)  
+      ) {
+        if (keyToTransform[0] != "cards") {
+           destinataireObject = VariableType.splitLogicalList(
+            [this.destinataire, ...keyToTransform],
+            this.gameData,
+            { returnType: "ref", log: false },
+          );
+        }else{
+           destinataireObject = VariableType.splitLogicalList(
+            [this.destinataire],
+            this.gameData,
+            { returnType: "ref", log: false },
+          );
+        }
+        
 
         if (!TypeManager.isDefined(destinataireObject)) {
           destinataireObject = this.destinataire;
@@ -789,7 +840,6 @@ export default class Action {
             });
           }
         }
- 
       }
       // IF WE WANT TO GIVE A SPECIFIC QUANTITY
       if (
@@ -969,7 +1019,7 @@ export default class Action {
             });
           }
         }
-      } 
+      }
       // END OF  IF WE WANT TO GIVE A SPECIFIC QUANTITY
 
       // SAVER

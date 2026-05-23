@@ -1,6 +1,8 @@
 
 // recuperation d'un objet dans le json
 
+import { LoggerClass } from "../core/logger/logger"
+
 // lecteur des events
 
 
@@ -99,7 +101,11 @@ function splitLogicalVariable(str) {
         } else {
             let property = value[elt]
             if (property == null) {
-                console.warn(elt + " property is null search :" + str + " in " + JSON.stringify(value))
+                console.warn(elt + " property is null search :" + JSON.stringify(str) + " in " + JSON.stringify(value))
+             LoggerClass.log(" call in :");
+          LoggerClass.log(
+            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+          );
             } else {
                 if (property.value != null) {
                     value = property.value

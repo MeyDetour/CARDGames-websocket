@@ -8,9 +8,9 @@ import PlayerManager from "../core/services/PlayerManager.js";
 const comparatortypeLogger = Logger("comparaisonType");
 export default class ComparaisonType extends TypeInterface {
   static removeTag(exp) {
-      if (!exp || typeof exp !== "string") {
-        return "";
-      }
+    if (!exp || typeof exp !== "string") {
+      return "";
+    }
     return exp.substring(5, exp.length - 1);
   }
 
@@ -34,6 +34,13 @@ export default class ComparaisonType extends TypeInterface {
     let list = [];
     let current = "";
 
+    let currentDetail = null;
+    if (params.conditionDetailsForTest) {
+      currentDetail = params.conditionDetailsForTest;
+      currentDetail.operator = "";
+      currentDetail.left = {};
+      currentDetail.right = {};
+    }
     for (let i = 0; i < str.length; i++) {
       const c = str[i];
       const next = str[i + 1];
@@ -47,6 +54,7 @@ export default class ComparaisonType extends TypeInterface {
         list.push(
           Parser.translateInnerExpression(current.trim(), gameData, {
             ...params,
+            conditionDetailsForTest: currentDetail && currentDetail.left && Object.keys(currentDetail.left).length === 0 ? currentDetail.left : null,
             depth: params.depth + 10,
           }),
         );
@@ -62,6 +70,7 @@ export default class ComparaisonType extends TypeInterface {
       list.push(
         Parser.translateInnerExpression(current.trim(), gameData, {
           ...params,
+          conditionDetailsForTest: currentDetail ? currentDetail.right : null,
           depth: params.depth + 10,
         }),
       );
@@ -72,27 +81,21 @@ export default class ComparaisonType extends TypeInterface {
           `Split into parts: ${structuredClone(list)}`,
       );
     }
-
-    list[0] = Parser.translateInnerExpression(list[0], gameData, {
-      ...params,
-      depth: params.depth + 10,
-    });
-    list[2] = Parser.translateInnerExpression(list[2], gameData, {
-      ...params,
-      depth: params.depth + 10,
-    });
-
+ 
     if (params.fileLogger) {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) + `After translation: ${list}`,
       );
     }
-    let result = ComparaisonType.resolveLogical(list,gameData);
+    let result = ComparaisonType.resolveLogical(list, gameData);
     if (params.fileLogger) {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) +
           `ComparaisonType result: ${result}`,
       );
+    }
+    if (params.conditionDetailsForTest) {
+      params.conditionDetailsForTest.result = result;
     }
     return result;
   }
@@ -102,7 +105,7 @@ export default class ComparaisonType extends TypeInterface {
    * @param  {List} list list of instructions like ["1","inferior","2"]
    * return : bool
    */
-  static resolveLogical(list,gameData) {
+  static resolveLogical(list, gameData) {
     const stringComparators = ["isEqualString"];
     const numberComparators = [
       "isEqualNumber",
@@ -128,7 +131,7 @@ export default class ComparaisonType extends TypeInterface {
     if (stringComparators.includes(comparateur)) {
       if (comparateur === "isEqualString") return a === b;
     }
-    if (numberComparators.includes(comparateur)) { 
+    if (numberComparators.includes(comparateur)) {
       let a = parseInt(list[0]);
       let b = parseInt(list[2]);
       if (isNaN(a) || isNaN(b)) {
@@ -159,15 +162,15 @@ export default class ComparaisonType extends TypeInterface {
       let playerB = list[2];
       if (
         comparateur === "differentPlayer" &&
-        PlayerManager.isPlayerType(playerA,gameData) &&
-        PlayerManager.isPlayerType(playerB,gameData)
+        PlayerManager.isPlayerType(playerA, gameData) &&
+        PlayerManager.isPlayerType(playerB, gameData)
       ) {
         return playerA.id !== playerB.id;
       }
       if (
         comparateur === "samePlayer" &&
-        PlayerManager.isPlayerType(playerA,gameData) &&
-        PlayerManager.isPlayerType(playerB,gameData)
+        PlayerManager.isPlayerType(playerA, gameData) &&
+        PlayerManager.isPlayerType(playerB, gameData)
       ) {
         return playerA.id === playerB.id;
       }

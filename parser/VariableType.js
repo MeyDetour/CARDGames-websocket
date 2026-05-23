@@ -24,23 +24,38 @@ export default class VariableType extends TypeInterface {
     if (!params) {
       params = {};
     }
+       // stop propagation because with call parsing and we dont want to have
+    // just topDiscardCard form str "{topDiscardCard#color}" but we want
+    // to have all the string to be able to parse it in the right order
+    // if we dont reset, params.conditionDetailsForTest will be transfered
+    // into other parsings
+    // we copy local params because if we remove directly params.conditionDetailsForTest
+    // this will be applied for splitLogical
+    const localParams = { ...params };
+  localParams.conditionDetailsForTest = null;
     if (params && params.fileLogger) {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) +
           `VariableType.splitLogical called with expression: ${str}`,
       );
     }
-
-    return this.splitLogicalList(
-      this.getListSplited(str, gameData, params),
+    let result = this.splitLogicalList(
+      this.getListSplited(str, gameData, localParams),
       gameData,
-      params,
+      localParams,
     );
+    if (params.conditionDetailsForTest) {
+      params.conditionDetailsForTest.result = result;
+    }
+    return result;
   }
   static getListSplited(str, gameData, params) {
     if (!params) {
       params = {};
     }
+ 
+
+
     if (!TypeManager.isDefined(str)) {
       variableLogger.error(
         "VariableType.getListSplited called with undefined str",
@@ -157,13 +172,24 @@ export default class VariableType extends TypeInterface {
           value = PlayerManager.getStartPlayer(gameData);
         } else if (elt === "allPlayersInGame") {
           value = gameData.data.players;
-        } else if (elt === "topDiscardCard") { 
-          if (!gameData.data.discardDeck || gameData.data.discardDeck.value.length === 0) {
-          return null;
+        } else if (elt === "topDiscardCard") {
+          if (
+            !gameData.data.discardDeck ||
+            gameData.data.discardDeck.value.length === 0
+          ) {
+            return null;
           }
-          let cardId = gameData.data.discardDeck.value[0];
+          let cardId =
+            gameData.data.discardDeck.value[
+              gameData.data.discardDeck.value.length - 1
+            ];
           let card = gameData.data.cards[cardId];
+          // si cet element n'est pas le dernier de la liste
+          // alors on va chercher les attributs de la carte (ex : {topDiscardCard#color})
           if (card) {
+            value = card;
+          }
+          if (i == 0 && list.length > 1 && card) {
             value = card.addedAttributs ?? {};
           }
         } else if (elt === "currentPlayer") {
@@ -303,9 +329,13 @@ export default class VariableType extends TypeInterface {
           console.warn(
             elt +
               " property is null search :" +
-              list +
+              JSON.stringify(list) +
               " in " +
               JSON.stringify(value),
+          );
+          console.log(" call in :");
+          console.log(
+            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
           );
           value = null;
         }
@@ -335,6 +365,9 @@ export default class VariableType extends TypeInterface {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) + JSON.stringify(value),
       );
+    }
+    if (params.conditionDetailsForTest) {
+      params.conditionDetailsForTest.result = value;
     }
     return value;
   }

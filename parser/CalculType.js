@@ -20,10 +20,19 @@ export default class CalculType extends TypeInterface {
     let comparators = ["+", "*", "-", "/", "%"];
     let string = "";
     let finalList = [];
+    let currentDetail = null;
+    if (params.conditionDetailsForTest) {
+      currentDetail = params.conditionDetailsForTest;
+      currentDetail.left = {};
+      currentDetail.right = {};
+    }
     for (let i = 0; i < str.length; i++) {
       if (comparators.includes(str[i])) {
         finalList.push(string);
         finalList.push(str[i]);
+        if (currentDetail) {
+          currentDetail.operator = str[i];
+        }
         string = "";
         continue;
       }
@@ -45,11 +54,13 @@ export default class CalculType extends TypeInterface {
     finalList[0] = Parser.translateInnerExpression(finalList[0], gameData, {
       ...params,
       depth: params.depth + 10,
+      conditionDetailsForTest: currentDetail ? currentDetail.left : null,
     });
 
     finalList[2] = Parser.translateInnerExpression(finalList[2], gameData, {
       ...params,
       depth: params.depth + 10,
+      conditionDetailsForTest: currentDetail ? currentDetail.right : null,
     });
     if (params.fileLogger) {
       params.fileLogger.log(
@@ -65,6 +76,9 @@ export default class CalculType extends TypeInterface {
           `CalculType result: ${result}`,
       );
     }
+    if (params.conditionDetailsForTest) {
+      params.conditionDetailsForTest.result = result;
+    }
     return result;
   }
 
@@ -75,7 +89,7 @@ export default class CalculType extends TypeInterface {
    */
   static resolveLogical(list) {
     let comparateur = list[1];
- 
+
     const parse = (val) => {
       if (typeof val === "string") {
         return parseFloat(val.replace(",", "."));

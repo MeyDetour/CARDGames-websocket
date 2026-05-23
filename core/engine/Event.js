@@ -77,11 +77,14 @@ export default class Event {
       Event._eventCallCounts[event.id] = 0;
     }
     Event._eventCallCounts[event.id]++;
-    if (Event._eventCallCounts[event.id] > 20) {
-      eventLogger.error(`Event ID ${event.id} called more than 20 times. Execution stopped.`);
-      if (socket && typeof socket.emit === 'function') {
-        socket.emit("eventLimitReached", { eventId: event.id, message: `Event ID ${event.id} called more than 20 times. Execution stopped.` });
-      }
+    if (Event._eventCallCounts[event.id] > (process.env.MAX_EVENT_OCCURRANCES_LOOP || 20)) {
+      
+      let msg = `Event ID ${event.id} called more than ${process.env.MAX_EVENT_OCCURRANCES_LOOP || 20} times. Execution stopped.`
+       eventLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      errorStack.addError( msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
       return null;
     }
     if (!gameData) {
@@ -135,10 +138,11 @@ export default class Event {
       params.location = fileLogger;
     }
 
+    let conditionDetailsForTest = {}
     let conditionOfEvent = Parser.translateInnerExpression(
       event.condition,
       gameData,
-      { ...params },
+      { ...params , conditionDetailsForTest:conditionDetailsForTest },
     );
     if (!event.condition) {
       conditionOfEvent = true;
@@ -148,6 +152,7 @@ export default class Event {
       gameData.data.testLogs.push({
         testType: typeOfEvent,
         diffs: [],
+        conditionDetailsForTest : conditionDetailsForTest,
         conditionResult : conditionOfEvent,
         executionDate: new Date(),
         ...event,
@@ -184,7 +189,7 @@ export default class Event {
         skipEventLog: skipEventLog,
       },
       params,
-      typeOfEvent,
+      typeOfEvent,conditionDetailsForTest,
       null,
     );
     if (event["boucle"]) {

@@ -3,9 +3,9 @@ import Parser from "./parser.js";
 
 export default class ExpressionType extends TypeInterface {
   static removeTag(exp) {
-      if (!exp || typeof exp !== "string") {
-        return "";
-      }
+    if (!exp || typeof exp !== "string") {
+      return "";
+    }
     return exp.substring(4, exp.length - 1);
   }
 
@@ -22,7 +22,11 @@ export default class ExpressionType extends TypeInterface {
     let depth = 0;
     let parts = [];
     let current = "";
-
+    let currentDetail = null;
+    if (params.conditionDetailsForTest) {
+      currentDetail = params.conditionDetailsForTest;
+      currentDetail.operator = "";
+    }
     for (let i = 0; i < str.length; i++) {
       const c = str[i];
       const next = str[i + 1];
@@ -35,12 +39,31 @@ export default class ExpressionType extends TypeInterface {
         depth === 0 &&
         ((c === "|" && next === "|") || (c === "&" && next === "&"))
       ) {
+
+      const op = c + c; // "||" ou "&&"
+      const leftExpr = current.trim();
         // left expression
-        if(params.fileLogger){
-          params.fileLogger.log( Parser.getDepthIndentation(params.depth) + "Get first part "+current.trim() + " and analyse...")
+        if (params.fileLogger) {
+          params.fileLogger.log(
+            Parser.getDepthIndentation(params.depth) +
+              "Get first part " +
+              current.trim() +
+              " and analyse...",
+          );
+        }
+
+        // LOG DETAIL FOR TEST
+        if (currentDetail) {
+          currentDetail.operator = op;
+          currentDetail.left = { 
+          };
         }
         parts.push(
-          Parser.translateInnerExpression(current.trim(), gameData, {...params, depth : params.depth+10})
+          Parser.translateInnerExpression(current.trim(), gameData, {
+            ...params,
+            conditionDetailsForTest: currentDetail ? currentDetail.left : null,
+            depth: params.depth + 10,
+          }),
         );
         parts.push(c + c);
         current = "";
@@ -53,27 +76,49 @@ export default class ExpressionType extends TypeInterface {
 
     // right side of
     if (current) {
-       if(params.fileLogger){
-          params.fileLogger.log(Parser.getDepthIndentation(params.depth) +  "Get seconde part "+current.trim() + " and analyse...")
-        }
+      if (params.fileLogger) {
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) +
+            "Get seconde part " +
+            current.trim() +
+            " and analyse...",
+        );
+      }
+      if (params.conditionDetailsForTest) {
+        currentDetail.right = {};
+      }
       parts.push(
-        Parser.translateInnerExpression(current.trim(), gameData, {...params, depth : params.depth+10})
+        Parser.translateInnerExpression(current.trim(), gameData, {
+          ...params,
+          conditionDetailsForTest: currentDetail ? currentDetail.right : null,
+          depth: params.depth + 10,
+        }),
       );
     }
     if (parts.length === 1) return parts[0];
     if (params.fileLogger) {
-      params.fileLogger.log(Parser.getDepthIndentation(params.depth) + 
-        `ExpressionType.splitLogical called with expression: ${str}`
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          `ExpressionType.splitLogical called with expression: ${str}`,
       );
-      params.fileLogger.log(Parser.getDepthIndentation(params.depth) + `Split into parts: ${parts}`);
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) + `Split into parts: ${parts}`,
+      );
     }
+
     let result = ExpressionType.resolveLogical(parts);
     if (params.fileLogger) {
-      params.fileLogger.log(Parser.getDepthIndentation(params.depth) + `ExpressionType result: ${result}`);
+      params.fileLogger.log(
+        Parser.getDepthIndentation(params.depth) +
+          `ExpressionType result: ${result}`,
+      );
     }
-    return result; 
+    if (currentDetail) {
+      currentDetail.result = result;
+    }
+    return result;
   }
-  
+
   /**
    *  Resolve  expression like a || b
    * @param  {List} list list of expression like ["false","&&","false"]

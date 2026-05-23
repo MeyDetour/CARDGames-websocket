@@ -160,6 +160,10 @@ class RoomManager {
           type: "cardList",
           value: [],
         },
+        middleDeck: {
+          type: "cardList",
+          value: [],
+        },
         //  liste des gains possibles dans le jeu avec leur valeur actuelle pour cette partie (qui peut évoluer pendant la partie) , ex : gainObject = { gainId1 : {value: 2} , gainId2 : {value: 0} }
         gain: {
           type: "gainObject",
@@ -337,6 +341,7 @@ class RoomManager {
       gameData.roomInDb.assets.cards,
     )
         gameData.data.discardDeck.value = [];
+        gameData.data.middleDeck.value = [];
 
     if (gameData.data.isTest) {
       GameManager.engine(gameData, socket, { event: "startGame" });
