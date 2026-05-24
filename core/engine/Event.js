@@ -77,12 +77,15 @@ export default class Event {
       Event._eventCallCounts[event.id] = 0;
     }
     Event._eventCallCounts[event.id]++;
-    if (Event._eventCallCounts[event.id] > (process.env.MAX_EVENT_OCCURRANCES_LOOP || 20)) {
-      
-      let msg = `Event ID ${event.id} called more than ${process.env.MAX_EVENT_OCCURRANCES_LOOP || 20} times. Execution stopped.`
-       eventLogger.error(msg);
+    if (
+      Event._eventCallCounts[event.id] >
+      (process.env.MAX_EVENT_OCCURRANCES_LOOP || 20)
+    ) {
+      let msg = `Event ID ${event.id} called more than ${process.env.MAX_EVENT_OCCURRANCES_LOOP || 20} times. Execution stopped.`;
+      eventLogger.error(msg);
       LoggerClass.logFileLocalisation();
-      errorStack.addError( msg,
+      errorStack.addError(
+        msg,
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
       return null;
@@ -138,11 +141,11 @@ export default class Event {
       params.location = fileLogger;
     }
 
-    let conditionDetailsForTest = {}
+    let conditionDetailsForTest = {};
     let conditionOfEvent = Parser.translateInnerExpression(
       event.condition,
       gameData,
-      { ...params , conditionDetailsForTest:conditionDetailsForTest },
+      { ...params, conditionDetailsForTest: conditionDetailsForTest },
     );
     if (!event.condition) {
       conditionOfEvent = true;
@@ -152,8 +155,8 @@ export default class Event {
       gameData.data.testLogs.push({
         testType: typeOfEvent,
         diffs: [],
-        conditionDetailsForTest : conditionDetailsForTest,
-        conditionResult : conditionOfEvent,
+        conditionDetailsForTest: conditionDetailsForTest,
+        conditionResult: conditionOfEvent,
         executionDate: new Date(),
         ...event,
       });
@@ -189,7 +192,8 @@ export default class Event {
         skipEventLog: skipEventLog,
       },
       params,
-      typeOfEvent,conditionDetailsForTest,
+      typeOfEvent,
+      conditionDetailsForTest,
       null,
     );
     if (event["boucle"]) {
@@ -423,23 +427,17 @@ export default class Event {
         }
       }
     }
-    if (
-      params.originEvent !== "loadDemon" &&
-      (action ? action !== "askPlayer" : true)
-    ) {
-      eventLogger.info(
-        "Trigger afterEvent in GameManager.engine From Event ID=" + event.id,
-      );
-      GameManager.engine(gameData, socket, { event: "afterEvent" });
-    }
-
+ 
     // SAVE LOG DIFF DETAILLE
     // mettre cette ligne avant l'execution des withValueEvent
     // sinon dans l'ordre d'execution on verra le withValue
-    // avant l'execution de l'event principal et pas apres
+    // avant l'execution de l'event principal et pas apres 
     if (gameData.data.isTest) {
-      gameData.data.testLogs.push({ ...actionObject.getActionEventForTest(),
-        conditionResult : conditionOfEvent, });
+       
+      gameData.data.testLogs.push({
+        ...actionObject.getActionEventForTest(),
+        conditionResult: conditionOfEvent,
+      });
     }
     if (event.loadMessage) {
       let message = Parser.translateInnerExpressionWithPlainText(
@@ -452,23 +450,36 @@ export default class Event {
       socket.to(gameData.roomId).emit("updateGameDataLogs", message);
     }
 
+
     // to execute if event doesnot wait answer from player
     if (event.event.withValue && action !== "askPlayer") {
       for (let eventInWVE of event.event.withValue) {
-        Event.applyWithValueEvent(eventInWVE, socket, gameData, params);
-
+       
         eventLogger.info(
           "Trigger afterEvent in GameManager.engine after withValue Event id" +
             eventInWVE.id +
             " of Event ID=" +
             event.id,
         );
+        Event.applyWithValueEvent(eventInWVE, socket, gameData, params,typeOfEvent);
+ 
         GameManager.engine(gameData, socket, {
           event: "afterEvent",
           ...params,
         });
       }
     }
+
+       if (
+      params.originEvent !== "loadDemon" &&
+      (action ? action !== "askPlayer" : true)
+    ) {
+      eventLogger.info(
+        "Trigger afterEvent in GameManager.engine From Event ID=" + event.id,
+      );
+      GameManager.engine(gameData, socket, { event: "afterEvent" });
+    }
+
 
     // Nettoyage du compteur si l'exécution s'est bien passée
     if (Event._eventCallCounts[event.id] > 0) {
@@ -675,7 +686,13 @@ export default class Event {
    * @param {Object} params
    * @returns {null|void}
    */
-  static applyWithValueEvent(shortWithValueEvent, socket, gameData, params,typeOfEvent="event") {
+  static applyWithValueEvent(
+    shortWithValueEvent,
+    socket,
+    gameData,
+    params,
+    typeOfEvent = "event",
+  ) {
     if (!shortWithValueEvent) {
       new AppError(socket, "shortWithValueEvent must be provided");
       eventLogger.warn("shortWithValueEvent must be provided");

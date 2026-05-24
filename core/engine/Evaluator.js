@@ -39,7 +39,7 @@ export default class Evaluator {
    */
   static loadDemon(gameData, socket, params) {
     let fileLogger = null;
-
+Event._eventCallCounts = {}
     // CREATE DEMON FILE LOG
     if (process.env.ENGINE_FILE_LOG !== "false") {
       fileLogger = FileLogger.create(["LOAD DEMON", "====================="]);

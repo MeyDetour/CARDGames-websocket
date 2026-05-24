@@ -87,18 +87,46 @@ export default class GameManager {
   }
   static changeCurrentPlayer(gameData, socket) {
     engineLogger.info("Do Engine Action : changeCurrentPlayer");
-    console.trace("Qui m'appelle ?");
+
+    let origin = parseInt(gameData.data.currentPlayerPosition.value);
     let nextP = null;
+    const maxTries = (gameData.data.playersList ? gameData.data.playersList.length : 20) + 1;
+    let tries = 0;
     do {
       nextP = PlayerManager.getNextPlayer(
         gameData,
         gameData.data.currentPlayerPosition.value,
       );
       gameData.data.currentPlayerPosition.value = nextP.position;
+      tries++;
+      if (tries > maxTries) {
+        engineLogger.error("Infinite loop detected in changeCurrentPlayer: all players are either skipped or inactive.");
+        break;
+      }
     } while (
       nextP.attachedEventForTour.value.includes("skipPlayerTour") ||
-      PlayerManager.isPlayerActifInGame(nextP)
+      !PlayerManager.isPlayerActifInGame(nextP)
     );
+    if (gameData.data.isTest) {
+      gameData.data.testLogs.push({
+        testType: "internalEvent",
+        diffs: [
+          {
+            id: "44z4fbj6b5fnze",
+            key: "changeCurrentPlayer",
+            before: origin,
+            after: gameData.data.currentPlayerPosition.value,
+          },
+        ],
+        type: "number",
+        name :"Change current player turn",
+        conditionResult: true,
+        executionDate: new Date(),
+        id: "nrgekkjnzdfefez",
+      });
+    }
+    engineLogger.info("Current player changed to position : " + gameData.data.currentPlayerPosition.value);
+
     return {};
   }
 
@@ -163,6 +191,7 @@ export default class GameManager {
       params = this.changeCurrentPlayer(gameData, socket);
     }
     if (params.event && params.event === "doAction") {
+      params.event = null; // to avoid loop if action call again engine with event
       if (TypeManager.isDefined(params.action)) {
         //apply action
         //verify player
@@ -181,10 +210,7 @@ export default class GameManager {
             params.playerId,
             params,
           );
-          if (
-            (params.actionType ? params.actionType != "askPlayer" : true) &&
-            gameData.data.state.value !== "endOfGame"
-          ) {
+          if (gameData.data.state.value !== "endOfGame") {
             params = this.changeCurrentPlayer(gameData, socket);
           }
         } else {

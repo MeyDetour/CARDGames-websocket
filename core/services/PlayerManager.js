@@ -259,7 +259,7 @@ export default class PlayerManager {
   }
   static isPlayerActifInGame(player) {
     return (
-      player.haswin.value || player.isSpectator.value || player.hasloose.value
+      !player.haswin.value && !player.isSpectator.value && !player.hasloose.value
     );
   }
 
