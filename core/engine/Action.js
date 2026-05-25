@@ -202,6 +202,45 @@ export default class Action {
     }
     return;
   }
+  reverseGameDirection() {
+    if (!TypeManager.isDefined(this.value)) {
+      const msg =
+        "Cannot apply event <<reverseGameDirection>> without value to indicate sens of changement of player  in event : " +
+        this.event["name"] +
+        "with ID=" +
+        this.event["id"];
+      this.actionLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      if (this.fileLogger) {
+        this.fileLogger.error(
+          new Error(msg),
+          "actions.js → reverseGameDirection()",
+        );
+      }
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
+    }
+    let oldSens = this.gameData.data.playerSens.value;
+    this.gameData.data.playerSens.value =
+      this.gameData.data.playerSens.value === "incrementation"
+        ? "decrementation"
+        : "incrementation";
+    if (this.fileLogger) {
+      this.fileLogger.log(`🔄 Changement du sens des joueurs`);
+    }
+    if (this.gameData.data.isTest) {
+      this.actionEventForTest.diffs.push({
+        id: "564e65rggrrrrrrlko555",
+        key: "Change Player Direction",
+        type: "player",
+        before: oldSens,
+        after: this.gameData.data.playerSens.value,
+      });
+    }
+    return;
+  }
   changeStartingPlayer() {
     // ERROR IF NO VALUE PROVIDED
     if (!TypeManager.isDefined(this.value)) {
@@ -306,7 +345,7 @@ export default class Action {
         LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
       );
     }
-    let actualPosition = gameData.data.currentPlayerPosition.value;
+    let actualPosition = this.gameData.data.currentPlayerPosition.value;
     if (this.fileLogger) {
       this.fileLogger.log(`Position actuelle du joueur : ${actualPosition}`);
       this.fileLogger.log(`Valeur à ajouter : ${this.value}`);
@@ -479,7 +518,7 @@ export default class Action {
     }
 
     let beforeGameData = structuredClone(this.gameData.data);
-
+     
     // PARCOURIR TOUS LES ELEMENTS A DONNER
     for (let key of Object.keys(this.giveElements)) {
       //transform element to give like {gain#1} to array like ["gain","1"]
@@ -505,7 +544,7 @@ export default class Action {
             this.gameData,
             { returnType: "ref" },
           );
-        }else{
+        } else {
           senderObject = VariableType.splitLogicalList(
             [this.sender],
             this.gameData,
@@ -521,23 +560,20 @@ export default class Action {
 
       // INITIALIZE DESTINATAIRE =================================
       let destinataireObject = null;
-      if (
-        TypeManager.isDefined(this.destinataire)  
-      ) {
+      if (TypeManager.isDefined(this.destinataire)) {
         if (keyToTransform[0] != "cards") {
-           destinataireObject = VariableType.splitLogicalList(
+          destinataireObject = VariableType.splitLogicalList(
             [this.destinataire, ...keyToTransform],
             this.gameData,
             { returnType: "ref", log: false },
           );
-        }else{
-           destinataireObject = VariableType.splitLogicalList(
+        } else {
+          destinataireObject = VariableType.splitLogicalList(
             [this.destinataire],
             this.gameData,
             { returnType: "ref", log: false },
           );
         }
-        
 
         if (!TypeManager.isDefined(destinataireObject)) {
           destinataireObject = this.destinataire;
@@ -813,8 +849,12 @@ export default class Action {
               key: PlayerManager.isPlayerType(this.sender, this.gameData)
                 ? this.sender.pseudo
                 : this.event.event.from,
-              type: "array",
+              type: senderObjectSave.type,
               id: "givea6566rrayraayr5454",
+              diff: ObjectManager.getObjectDiff(
+                structuredClone(senderObjectSave.value),
+                structuredClone(senderObject.value),
+              ),
               before: structuredClone(senderObjectSave.value),
               after: structuredClone(senderObject.value),
             });
@@ -834,6 +874,10 @@ export default class Action {
                 ? this.sender.pseudo
                 : this.event.event.from,
               type: "array",
+              diff: ObjectManager.getObjectDiff(
+                structuredClone(destinataireObjectSave.value),
+                structuredClone(destinataireObject.value),
+              ),
               id: "receivearr465ayraayr5454",
               before: structuredClone(destinataireObjectSave.value),
               after: structuredClone(destinataireObject.value),
@@ -971,7 +1015,7 @@ export default class Action {
                 );
               }
 
-              destinataireObject.value.push(senderObject.value[n]);
+              destinataireObject?.value?.push(senderObject.value[n]);
               newSenderObjectValue.splice(n, 1);
             }
 
@@ -996,7 +1040,7 @@ export default class Action {
               key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
                 ? this.destinataire.pseudo
                 : this.event.event.for,
-              type: destinataireObject.type,
+              type: destinataireObject?.type,
               message: "Receive " + sum + " cards from sender",
               id: "435545grerg",
               before: structuredClone(destinataireObjectSave.value),

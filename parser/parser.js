@@ -319,9 +319,11 @@ export default class Parser {
         // on ferme si c'est ouvert, on ouvre si c'est fermé
         startListenText = !startListenText;
         continue;
-      }
-      // si on est en plein texte et que guillemet ouvert alors on stocke la chaine de caractere
+      }else{
+   // si on est en plein texte et que guillemet ouvert alors on stocke la chaine de caractere
       currentPart += c;
+      }
+   
     }
     if (currentPart) {
       text.push(currentPart);

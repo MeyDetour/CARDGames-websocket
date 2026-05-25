@@ -6,7 +6,7 @@ import AppError from "../error/AppError.js";
 import { MessagerieManager } from "./MessagerieManager.js";
 import { io } from "../../server.js";
 import { TypeManager } from "./helper/TypeManager.js";
-import GameManager from "./GameManager.js"; 
+import GameManager from "./GameManager.js";
 import CardManager from "./CardManager.js";
 
 const roomLogger = Logger("RoomManager");
@@ -127,6 +127,11 @@ class RoomManager {
         spectators: [],
         isTest: isTest,
         messages: [],
+        tourSens: {
+          type: "string",
+          value: gameInDB.params.tours.sens ?? "incrementation",
+        },
+        playerSens: { type: "string", value: "incrementation" },
         logs: [],
         testLogs: [],
         state: { type: "string", value: "waitingPlayers" },
@@ -211,6 +216,20 @@ class RoomManager {
       } catch (e) {}
       return;
     }
+    roomLogger.info(pseudo + "A rejoin la room");
+    if (!roomID) {
+      const msg =
+        "No room id provided to RoomManager.joinRoom, cannot join room";
+      roomLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      try {
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
+      } catch (e) {}
+      return;
+    }
     if (!pseudo) {
       const msg =
         "No pseudo provided to RoomManager.joinRoom, cannot join room";
@@ -239,62 +258,7 @@ class RoomManager {
     }
 
     let gameData = this.getRoom(roomID);
-    let isSpectatorAuthorized =
-      gameData.roomInDb.params.globalGame.autoriseSpectator ?? false;
-    let isSpectator =
-      isSpectatorAuthorized && gameData.data.state.value !== "waitingPlayers";
-
-    if (gameData) {
-      if (this.isFullRoom(gameData) && !isSpectator) {
-        new AppError(
-          socket,
-          "La partie est déjà pleine, vous ne pouvez pas la rejoindre",
-        );
-        return;
-      }
-      if (this.isFullRoom(gameData) && isSpectatorAuthorized) {
-        isSpectator = true;
-      }
-      socket.join(roomID);
-      socket.data.roomId = roomID;
-      socket.data.pseudo = pseudo;
-      let player = PlayerManager.createPlayerOBject(
-        {
-          position: gameData.data.players.length + 1,
-          pseudo: pseudo,
-          skin: skin,
-          socketID: socket.id,
-          id: Identificator.generateId(), // id concerne la room, aucun joueur n'a le meme id dans cette room pusiqu'elle vient d'etre crée
-        },
-        gameData.roomInDb["playerGlobalValue"],
-        gameData.roomInDb.assets.gains,
-      );
-      let playerId = player.id;
-      // JOIN AS SPECTATOR IF GAME IS ALREADY STARTED AND SPECTATOR ARE ALLOWED
-      if (isSpectator) {
-        player.isSpectator.value = true;
-      }
-      socket.data.playerId = playerId;
-      if (isSpectator) {
-        gameData.data.spectators.push(player);
-        MessagerieManager.addMessage(gameData, socket, {
-          content: pseudo + " observe la partie",
-        });
-        socket.emit("roomJoinedAsSpectator", { gameData, player });
-        socket
-          .to(roomID)
-          .emit("playerHasJoinedRoomAsSpectator", { gameData, player });
-      } else {
-        gameData.data.players.push(player);
-        MessagerieManager.addMessage(gameData, socket, {
-          content: pseudo + " a rejoint la partie",
-        });
-        PlayerManager.reORderPlayerPosition(gameData);
-
-        socket.emit("roomJoined", { gameData, player });
-        socket.to(roomID).emit("playerHasJoinedRoom", { gameData, player });
-      }
-    } else {
+    if (!gameData) {
       const msg = "Join room failed: Id incorrect -> " + roomID;
       roomLogger.error(msg);
       LoggerClass.logFileLocalisation();
@@ -305,6 +269,97 @@ class RoomManager {
         );
       } catch (e) {}
       new AppError(socket, "Id incorrect");
+      return;
+    }
+
+    // Règles d'entrée dans la room
+    const isSpectatorAuthorized =
+      gameData.roomInDb.params.globalGame.autoriseSpectator ?? false;
+    const isFull = this.isFullRoom(gameData);
+    const hasStarted = gameData.data.state.value !== "waitingPlayers";
+
+    let joinAsSpectator = false;
+    let joinAsPlayer = false;
+
+    if (isFull) {
+      // 1. La partie est pleine
+      if (isSpectatorAuthorized) {
+        joinAsSpectator = true;
+      } else {
+        new AppError(
+          socket,
+          "La partie est déjà pleine, vous ne pouvez pas la rejoindre",
+        );
+        return;
+      }
+    } else {
+      // 2. La partie n'est pas pleine
+      if (hasStarted) {
+        // Si elle a commencé
+        if (isSpectatorAuthorized) {
+          joinAsSpectator = true;
+        } else {
+          new AppError(
+            socket,
+            "La partie a déjà commencé, vous ne pouvez pas la rejoindre",
+          );
+          return;
+        }
+      } else {
+        // Si elle n'a pas commencé
+        if (
+          gameData.data.players.length <
+          gameData.roomInDb.params.globalGame.maxPlayer
+        ) {
+          joinAsPlayer = true;
+        } else if (isSpectatorAuthorized) {
+          joinAsSpectator = true;
+        } else {
+          new AppError(
+            socket,
+            "La partie est pleine et les spectateurs ne sont pas autorisés",
+          );
+          return;
+        }
+      }
+    }
+
+    socket.join(roomID);
+    socket.data.roomId = roomID;
+    socket.data.pseudo = pseudo;
+
+    let player = PlayerManager.createPlayerOBject(
+      {
+        position: gameData.data.players.length + 1,
+        pseudo: pseudo,
+        skin: skin,
+        socketID: socket.id,
+        id: Identificator.generateId(),
+      },
+      gameData.roomInDb["playerGlobalValue"],
+      gameData.roomInDb.assets.gains,
+    );
+    let playerId = player.id;
+    socket.data.playerId = playerId;
+
+    if (joinAsSpectator) {
+      player.isSpectator.value = true;
+      gameData.data.spectators.push(player);
+      MessagerieManager.addMessage(gameData, socket, {
+        content: pseudo + " observe la partie",
+      });
+      socket.emit("roomJoinedAsSpectator", { gameData, player });
+      socket
+        .to(roomID)
+        .emit("playerHasJoinedRoomAsSpectator", { gameData, player });
+    } else if (joinAsPlayer) {
+      gameData.data.players.push(player);
+      MessagerieManager.addMessage(gameData, socket, {
+        content: pseudo + " a rejoint la partie",
+      });
+      PlayerManager.reORderPlayerPosition(gameData);
+      socket.emit("roomJoined", { gameData, player });
+      socket.to(roomID).emit("playerHasJoinedRoom", { gameData, player });
     }
   }
   replayGame(gameData, socket) {
@@ -337,11 +392,9 @@ class RoomManager {
     gameData.data.currentPlayerPosition.value = 1;
     gameData.data.tour = 0;
     gameData.data.manche = 0;
-    gameData.data.deck.value = Object.keys(
-      gameData.roomInDb.assets.cards,
-    )
-        gameData.data.discardDeck.value = [];
-        gameData.data.middleDeck.value = [];
+    gameData.data.deck.value = Object.keys(gameData.roomInDb.assets.cards);
+    gameData.data.discardDeck.value = [];
+    gameData.data.middleDeck.value = [];
 
     if (gameData.data.isTest) {
       GameManager.engine(gameData, socket, { event: "startGame" });
@@ -400,7 +453,6 @@ class RoomManager {
         `${pseudo} a quitté la room ${roomId}. Joueurs restants : ${gameData.data.players.length}`,
       );
 
-      // delete player if he's the last
       if (
         gameData.data.players.length + gameData.data.spectators.length ===
         0

@@ -6,6 +6,15 @@ export class TypeManager {
     if (typeof str === "boolean") return true;
     if (str === "true" || str === "false") return true;
     return false;
+  } static isTrue(str) { 
+    if (str === "true") return true; 
+    if (str == true) return true;
+    return false;
+  } static isFalse(str) { 
+    if (str === "false") return true; 
+    if (str === "true") return false; 
+    if (str==false)return true;
+    return false;
   }
   static strToBool(str) {
     if (typeof str == "boolean") return str;

@@ -365,6 +365,9 @@ export default class Event {
         );
       }
       if (action) {
+        if (action  =="reverseGameDirection"){
+          actionObject.reverseGameDirection();
+        }
         if (action === "shuffle") {
           actionObject.shuffle();
         }
@@ -427,13 +430,12 @@ export default class Event {
         }
       }
     }
- 
+
     // SAVE LOG DIFF DETAILLE
     // mettre cette ligne avant l'execution des withValueEvent
     // sinon dans l'ordre d'execution on verra le withValue
-    // avant l'execution de l'event principal et pas apres 
+    // avant l'execution de l'event principal et pas apres
     if (gameData.data.isTest) {
-       
       gameData.data.testLogs.push({
         ...actionObject.getActionEventForTest(),
         conditionResult: conditionOfEvent,
@@ -450,19 +452,23 @@ export default class Event {
       socket.to(gameData.roomId).emit("updateGameDataLogs", message);
     }
 
-
     // to execute if event doesnot wait answer from player
     if (event.event.withValue && action !== "askPlayer") {
       for (let eventInWVE of event.event.withValue) {
-       
         eventLogger.info(
           "Trigger afterEvent in GameManager.engine after withValue Event id" +
             eventInWVE.id +
             " of Event ID=" +
             event.id,
         );
-        Event.applyWithValueEvent(eventInWVE, socket, gameData, params,typeOfEvent);
- 
+        Event.applyWithValueEvent(
+          eventInWVE,
+          socket,
+          gameData,
+          params,
+          typeOfEvent,
+        );
+
         GameManager.engine(gameData, socket, {
           event: "afterEvent",
           ...params,
@@ -470,7 +476,7 @@ export default class Event {
       }
     }
 
-       if (
+    if (
       params.originEvent !== "loadDemon" &&
       (action ? action !== "askPlayer" : true)
     ) {
@@ -479,7 +485,6 @@ export default class Event {
       );
       GameManager.engine(gameData, socket, { event: "afterEvent" });
     }
-
 
     // Nettoyage du compteur si l'exécution s'est bien passée
     if (Event._eventCallCounts[event.id] > 0) {

@@ -258,9 +258,14 @@ export default class PlayerManager {
     }
   }
   static isPlayerActifInGame(player) {
-    return (
-      !player.haswin.value && !player.isSpectator.value && !player.hasloose.value
-    );
+    // Un joueur est actif s'il n'a pas gagné, n'est pas spectateur, et n'a pas perdu
+    // On considère null ou undefined comme "pas gagné" (donc actif)
+    const hasWin = player.haswin && TypeManager.isTrue(player.haswin.value);
+    const isSpectator =
+      player.isSpectator && TypeManager.isTrue(player.isSpectator.value);
+    const hasLoose =
+      player.hasloose && TypeManager.isTrue(player.hasloose.value);
+    return !hasWin && !isSpectator && !hasLoose;
   }
 
   static changePlayerOrder(order, gameData) {
@@ -466,8 +471,23 @@ export default class PlayerManager {
         ? globalValueOfPlayer[key].defaultValue
         : TypeManager.getDefaultValueOfType(globalValueOfPlayer[key].type);
     }
+
+    let actualSpectator = gameData.data.spectators.find((s) => s.id === spectatorId);
+ 
+    if(!actualSpectator){
+      const msg = `Spectator with id ${spectatorId} not found in setSpectatorAsPlayer()`;
+      playerManagerLogger.error(msg);
+      LoggerClass.logFileLocalisation();
+      try {
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
+      } catch (e) {}
+      return null;
+    }
     let newPlayer = PlayerManager.restartPlayer(
-      gameData.data.spectators.find((s) => s.id === spectatorId),
+      actualSpectator,
       gainObject,
       globalValueOfPlayer,
     );

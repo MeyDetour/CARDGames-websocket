@@ -12,6 +12,8 @@ export default class PlayerSocket {
       let id = socket.data.playerId;
       let roomId = socket.data.roomId;
       let gameData = roomManager.getRoom(roomId);
+      console.log("id", id);
+      console.log("roomId", roomId);
       if (!gameData) {
         GameDataError.notFound(socket, roomId);
         return;
