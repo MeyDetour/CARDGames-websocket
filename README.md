@@ -79,23 +79,23 @@ sequenceDiagram
 
 
 
-# Fonctionnement du Backend : Le Game Engine et ses Démons
+# Fonctionnement du Backend : Le Game Engine et ses Déclencheurs
 
 Voici une vue d'ensemble de la logique de notre serveur de jeu. Le cœur du système repose sur un Game Engine (moteur de jeu) qui agit comme le noyau central de l'application.
 
 ## Le rôle du Game Engine
 Le Game Engine n'est pas là pour effectuer tous les calculs, mais pour assurer un suivi continu des étapes du jeu (début de partie, changement de tour, fin de manche). Il ordonne les événements et sert de point de contrôle unique. Contrairement aux interactions directes des joueurs, le moteur gère la structure temporelle et logique de la partie.
 
-## Les Démons : Les gardiens de l'état
-Les Démons sont des entités autonomes qui surveillent l'état du jeu. Lorsqu'une condition spécifique est remplie (par exemple : un certain nombre de cartes en main), ils déclenchent un événement automatique : distribuer des cartes, mélanger le deck ou attribuer des jetons.
+## Les Déclencheurs : Les gardiens de l'état
+Les Déclencheurs sont des entités autonomes qui surveillent l'état du jeu. Lorsqu'une condition spécifique est remplie (par exemple : un certain nombre de cartes en main), ils déclenchent un événement automatique : distribuer des cartes, mélanger le deck ou attribuer des jetons.
 
 
 ## Le flux d'exécution
 À chaque signal reçu par le serveur WebSocket, le cycle suivant s'enclenche :
 
-- Surveillance des étapes : Le Game Engine vérifie si une étape clé est atteinte (ex: "Fin de tour"). Si c'est le cas, il appelle directement le Démon associé à cette étape.
+- Surveillance des étapes : Le Game Engine vérifie si une étape clé est atteinte (ex: "Fin de tour"). Si c'est le cas, il appelle directement le Déclencheur associé à cette étape.
 
-- Vérification de l'état : Si aucune étape majeure n'est détectée, le moteur sollicite le Chargeur de Démons. Ce dernier parcourt tous les démons pour vérifier si leurs conditions d'activation sont remplies selon l'état actuel des joueurs.
+- Vérification de l'état : Si aucune étape majeure n'est détectée, le moteur sollicite le Chargeur de Déclencheurs. Ce dernier parcourt tous les déclencheurs pour vérifier si leurs conditions d'activation sont remplies selon l'état actuel des joueurs.
 
 - Gestion des rôles : Le moteur détermine ensuite les rôles des joueurs et les actions autorisées.
 
@@ -110,21 +110,21 @@ flowchart TB
  subgraph subGraph0["Noyau Central (Game Engine)"]
         StepCheck{"Etape atteinte ? <br><i>Début, Tour, Manche</i>"}
         GE{"Game Engine"}
-        DemonSpecific["Appel du Démon spécifique"]
-        DemonLoader["Chargeur de Démons"]
+        DeclencheurSpecific["Appel du Déclencheur spécifique"]
+        DeclencheurLoader["Chargeur de Déclencheurs"]
         CheckCond@{ label: "Vérification des <br>conditions d'état" }
-        ExecuteDemon["Exécution des événements <br><i>Distribuer, Mélanger...</i>"]
+        ExecuteDeclencheur["Exécution des événements <br><i>Distribuer, Mélanger...</i>"]
         PlayerLogic["Calcul des rôles et <br>actions autorisées"]
   end
     WS["Signal WebSocket Reçu"] --> GE
     GE --> StepCheck
-    StepCheck -- OUI --> DemonSpecific
-    DemonSpecific --> DemonLoader
-    StepCheck -- NON --> DemonLoader
-    DemonLoader --> CheckCond
-    CheckCond -- Remplies --> ExecuteDemon
+    StepCheck -- OUI --> DeclencheurSpecific
+    DeclencheurSpecific --> DeclencheurLoader
+    StepCheck -- NON --> DeclencheurLoader
+    DeclencheurLoader --> CheckCond
+    CheckCond -- Remplies --> ExecuteDeclencheur
     CheckCond -- Non Remplies --> PlayerLogic
-    ExecuteDemon --> PlayerLogic
+    ExecuteDeclencheur --> PlayerLogic
     PlayerLogic --> Broadcast@{ label: "Broadcast : Mise à jour de l'interface" }
     Broadcast --> Front["Front-end UI"]
 

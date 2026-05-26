@@ -35,7 +35,7 @@ export default class Event {
     }
     eventLogger.info("Search Event ID: " + id);
     if (!gameData.roomInDb.events["events"]) {
-      new AppError(socket, "Demon folder does not exist!");
+      new AppError(socket, "Declencheur folder does not exist!");
       return null;
     }
     let event = gameData.roomInDb.events["events"].filter(
@@ -477,7 +477,7 @@ export default class Event {
     }
 
     if (
-      params.originEvent !== "loadDemon" &&
+      params.originEvent !== "loadDeclencheur" &&
       (action ? action !== "askPlayer" : true)
     ) {
       eventLogger.info(

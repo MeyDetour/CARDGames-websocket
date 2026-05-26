@@ -21,7 +21,7 @@ export default class GameManager {
     gameData.data.state.value = "inProgress";
     gameLogger.info("EVENTS : Check onGameStart Events");
     io.to(gameData.roomId).emit("gameStarted", { gameData });
-    Evaluator.loadDemon(gameData, socket, {
+    Evaluator.loadDeclencheur(gameData, socket, {
       originEvent: "startOfGame",
     });
     // implication
@@ -33,7 +33,7 @@ export default class GameManager {
     console.trace("Qui m'appelle ?");
     gameData.data.logs.push("Début de la manche");
     gameLogger.info("EVENTS : Check eachStartOfManche Events");
-    Evaluator.loadDemon(gameData, socket, {
+    Evaluator.loadDeclencheur(gameData, socket, {
       originEvent: "eachStartOfManche",
     });
     // implication
@@ -46,7 +46,7 @@ export default class GameManager {
     gameData.data.logs.push("fin de la manche");
     gameLogger.info("EVENTS : Check eachEndOfManche Events");
 
-    Evaluator.loadDemon(gameData, socket, {
+    Evaluator.loadDeclencheur(gameData, socket, {
       originEvent: "eachEndOfManche",
     });
     // implication
@@ -66,7 +66,7 @@ export default class GameManager {
 
     gameData.data.currentPlayerPosition.value = startPlayer;
 
-    Evaluator.loadDemon(gameData, socket, {
+    Evaluator.loadDeclencheur(gameData, socket, {
       originEvent: "onChangeTour",
     });
     return {};
@@ -80,7 +80,7 @@ export default class GameManager {
     gameData.data.tour = 0;
 
     gameData.data.currentPlayerPosition.value = 1;
-    Evaluator.loadDemon(gameData, socket, {
+    Evaluator.loadDeclencheur(gameData, socket, {
       originEvent: "startOfManche",
     });
     return { event: "startOfManche" };
@@ -231,7 +231,7 @@ export default class GameManager {
 
     //check actions for player
 
-    Evaluator.loadDemon(gameData, socket, params);
+    Evaluator.loadDeclencheur(gameData, socket, params);
     if (gameData.data.state.value !== "endOfGame") {
       Evaluator.loadWin(gameData, socket);
     }

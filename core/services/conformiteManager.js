@@ -29,7 +29,7 @@ export class ConformiteManager {
     );
     this.compareObject(roomData, schema);
     this.verifyParams(roomData.params);
-    this.verifyDemon(roomData.events.demons);
+    this.verifyDeclencheur(roomData.events.triggers);
     this.verifyEvent(roomData.events.events); 
     this.verifyEditionHistory(roomData.editionHistory);
     this.verifyGlobalValueOfPlayer(roomData.globalValueOfPlayer);
@@ -158,8 +158,8 @@ export class ConformiteManager {
       });
     }
   }
-  static verifyDemon(demons) {
-    for (let e of demons) {
+  static verifyDeclencheur(triggers) {
+    for (let e of triggers) {
       this.compareObject(e, {
         id: "number",
         name: "string",

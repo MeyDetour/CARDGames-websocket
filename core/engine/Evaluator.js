@@ -12,7 +12,7 @@ import { io } from "../../server.js";
 let evaluatorLogger = Logger("evaluator");
 
 /**
- * Utilitaires pour charger et vérifier les conditions/démons définis dans
+ * Utilitaires pour charger et vérifier les conditions/déclencheurs définis dans
  * les événements de la room. Permet d'exécuter automatiquement les
  * événements associés lorsque les conditions sont satisfaites.
  */
@@ -26,26 +26,26 @@ export default class Evaluator {
    * @param {Object} gameData detail of all game
    * @param {Object}  {
    *                 originEvent:str,  -> manually declenche event like onChangeTour
-   *                 removeAfterUse:bool,  -> like "onStartGame" we want to delete demon
+   *                 removeAfterUse:bool,  -> like "onStartGame" we want to delete trigger
    * return : value
    */
   /**
-   * Parcourt les démons (rules) et exécute les events associés si la
-   * condition du démon est vraie.
+   * Parcourt les déclencheurs (rules) et exécute les events associés si la
+   * condition du déclencheur est vraie.
    * @param {Object} gameData - données complètes de la partie
    * @param {Socket} socket - socket de l'appelant (pour émettre des erreurs)
    * @param {Object} [params] - params: { originEvent, removeAfterUse }
    * @returns {null|void}
    */
-  static loadDemon(gameData, socket, params) {
+  static loadDeclencheur(gameData, socket, params) {
     let fileLogger = null;
 Event._eventCallCounts = {}
-    // CREATE DEMON FILE LOG
+    // CREATE DECLENCHEUR FILE LOG
     if (process.env.ENGINE_FILE_LOG !== "false") {
-      fileLogger = FileLogger.create(["LOAD DEMON", "====================="]);
-      evaluatorLogger.info(this.evaluatorLogTitle("loadDemon"));
+      fileLogger = FileLogger.create(["LOAD DECLENCHEUR", "====================="]);
+      evaluatorLogger.info(this.evaluatorLogTitle("loadDeclencheur"));
       evaluatorLogger.info(
-        "Load Demon with params : " + JSON.stringify(params),
+        "Load Declencheur with params : " + JSON.stringify(params),
       );
       params.location = fileLogger;
       if (fileLogger) {
@@ -55,13 +55,13 @@ Event._eventCallCounts = {}
       }
     }
 
-    // No demons
-    if (!gameData.roomInDb.events["demons"]) {
-      new AppError(socket, "Demon folder does not exist!");
+    // No triggers
+    if (!gameData.roomInDb.events["triggers"]) {
+      new AppError(socket, "triggers key does not exist!");
       if (fileLogger) {
         fileLogger.error(
-          new Error("Demon folder does not exist!"),
-          "Evaluator.js  -->  loadDemon()",
+          new Error("triggers key does not exist!"),
+          "Evaluator.js  -->  loadDeclencheur()",
         );
       }
       return null;
@@ -74,34 +74,34 @@ Event._eventCallCounts = {}
       if (fileLogger) fileLogger.warn("There is no current player");
     }
 
-    // VERIFY ALL DEMONS
+    // VERIFY ALL DECLENCHEURS
     let c = 0;
-    for (let demon of gameData.roomInDb.events["demons"]) {
-      // LOG START DEMON CHECK
+    for (let trigger of gameData.roomInDb.events["triggers"]) {
+      // LOG START DECLENCHEUR CHECK
       if (fileLogger) {
         fileLogger.log(
-          `Check demon: ${demon.name || "unnamed"} | condition: ${demon.condition}`,
+          `Check trigger: ${trigger.name || "unnamed"} | condition: ${trigger.condition}`,
         );
-        fileLogger.log(LoggerClass.pretty(demon));
+        fileLogger.log(LoggerClass.pretty(trigger));
       }
       // IF THERE NO CONDITION OR NAME
-      if (!demon.name || !demon.condition) {
+      if (!trigger.name || !trigger.condition) {
         if (fileLogger) {
           console.log(fileLogger);
           fileLogger.warn(
-            `Demon missing name or condition: ${JSON.stringify(demon)}`,
+            `Declencheur missing name or condition: ${JSON.stringify(trigger)}`,
           );
         }
         continue;
       }
-      // evaluatorLogger.debug("====DEMON [" + demon.id + "]: " + demon.name);
+      // evaluatorLogger.debug("====DECLENCHEUR [" + trigger.id + "]: " + trigger.name);
       let result = null;
 
-      // IF DEMON MUST ITERATE ON ELEMENT TO CHECK CONDITION
-      if (demon.boucle) {
-        if (fileLogger) fileLogger.log(`Demon boucle: ${demon.boucle}`);
+      // IF DECLENCHEUR MUST ITERATE ON ELEMENT TO CHECK CONDITION
+      if (trigger.boucle) {
+        if (fileLogger) fileLogger.log(`Declencheur boucle: ${trigger.boucle}`);
         let elts = Parser.translateInnerExpression(
-          demon.boucle,
+          trigger.boucle,
           gameData,
           params,
         );
@@ -109,27 +109,27 @@ Event._eventCallCounts = {}
         if (!Array.isArray(elts)) {
           new AppError(
             socket,
-            "Cannot obtain array with value " + demon.boucle,
+            "Cannot obtain array with value " + trigger.boucle,
           );
           evaluatorLogger.error(
-            "Cannot obtain array with value " + demon.boucle,
+            "Cannot obtain array with value " + trigger.boucle,
           );
           fileLogger.error(
-            new Error("Cannot obtain array with value " + demon.boucle),
-            "Evaluator.js  -->  loadDemon()",
+            new Error("Cannot obtain array with value " + trigger.boucle),
+            "Evaluator.js  -->  loadDeclencheur()",
           );
           return null;
         }
 
         for (let i = 0; i < elts.length; i++) {
-          if (demon.condition.includes("playerBoucle")) {
+          if (trigger.condition.includes("playerBoucle")) {
             if (result === false) {
               continue;
             }
 
             if (
               params.originEvent &&
-              !demon.condition.includes(params.originEvent)
+              !trigger.condition.includes(params.originEvent)
             ) {
               result = false;
               continue;
@@ -139,7 +139,7 @@ Event._eventCallCounts = {}
               playerBoucle: PlayerManager.getPlayer(gameData, i + 1),
             };
             result = Parser.translateInnerExpression(
-              demon.condition,
+              trigger.condition,
               gameData,
               params,
             );
@@ -151,21 +151,21 @@ Event._eventCallCounts = {}
         }
       } else {
         // IF ITS SIMPLE CONDITION
-        result = Parser.translateInnerExpression(demon.condition, gameData, {
+        result = Parser.translateInnerExpression(trigger.condition, gameData, {
           ...params,
           eventEmited: params?.originEvent,
         });
         if (fileLogger)
           fileLogger.log(
-            `Result for demon condition: ${JSON.stringify(result)}`,
+            `Result for trigger condition: ${JSON.stringify(result)}`,
           );
-        // un demon appelé par un originEvent (ChangerManche,changertour etc)
-        // declenche des evenements et demons, eviter de repeter deux fois le
-        //  meme demon alors qu'il n'a pas fini d'executer ses evenements
+        // un trigger appelé par un originEvent (ChangerManche,changertour etc)
+        // declenche des evenements et triggers, eviter de repeter deux fois le
+        //  meme trigger alors qu'il n'a pas fini d'executer ses evenements
         // eviter de repeter deux fois l'evenement si on
         if (
           params.originEvent &&
-          !demon.condition.includes(params.originEvent)
+          !trigger.condition.includes(params.originEvent)
         ) {
           result = false;
         }
@@ -174,12 +174,12 @@ Event._eventCallCounts = {}
       if (typeof result !== "boolean") {
         const msg =
           "Erreur sur la condition : " +
-          demon.condition +
+          trigger.condition +
           " le résultat n'est pas un boolean mais : " +
           JSON.stringify(result);
         evaluatorLogger.error(msg);
         if (fileLogger)
-          fileLogger.error(new Error(msg), "Evaluator.js  -->  loadDemon()");
+          fileLogger.error(new Error(msg), "Evaluator.js  -->  loadDeclencheur()");
         LoggerClass.logFileLocalisation();
         errorStack.addError(
           msg,
@@ -188,27 +188,27 @@ Event._eventCallCounts = {}
       }
 
       if (result) {
-        evaluatorLogger.info("le démon est réalisable : " + demon.condition);
-        if (fileLogger) fileLogger.log(`Demon réalisable: ${demon.condition}`);
+        evaluatorLogger.info("le déclencheur est réalisable : " + trigger.condition);
+        if (fileLogger) fileLogger.log(`Declencheur réalisable: ${trigger.condition}`);
         gameData.data.testLogs.push({
-          testType: "demon",
-          ...demon,
+          testType: "trigger",
+          ...trigger,
           executionDate: new Date(),
           id: "o45455efer",
         });
-        LoggerClass.objectToString(demon);
+        LoggerClass.objectToString(trigger);
 
-        for (let id of demon.events) {
+        for (let id of trigger.events) {
           if (fileLogger) fileLogger.log(`Apply event id: ${id}`);
           Event.applyEventId(id, socket, gameData, {
             ...params,
-            originEvent: "loadDemon",
+            originEvent: "loadDeclencheur",
           });
         }
-        if (demon.removeAfterUse) {
-          evaluatorLogger.info("remove demon");
-          if (fileLogger) fileLogger.log("remove demon");
-          gameData.roomInDb.events["demons"].splice(c, 1);
+        if (trigger.removeAfterUse) {
+          evaluatorLogger.info("remove trigger");
+          if (fileLogger) fileLogger.log("remove trigger");
+          gameData.roomInDb.events["triggers"].splice(c, 1);
         }
       }
       c++;
@@ -749,8 +749,8 @@ Event._eventCallCounts = {}
     console.log(gameData.data.state);
   }
   static evaluatorLogTitle(type) {
-    if (type === "loadDemon")
-      return "LOAD DEMON============================================================================================";
+    if (type === "loadDeclencheur")
+      return "LOAD DECLENCHEUR============================================================================================";
     if (type === "loadRoles")
       return "=============LOAD ROLES==============================================================================";
     if (type === "loadActionsForPlayers")
