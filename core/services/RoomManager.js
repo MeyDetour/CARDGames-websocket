@@ -274,7 +274,7 @@ class RoomManager {
 
     // Règles d'entrée dans la room
     const isSpectatorAuthorized =
-      gameData.roomInDb.params.globalGame.autoriseSpectator ?? false;
+      gameData.roomInDb.params.globalGame.allowSpectator ?? false;
     const isFull = this.isFullRoom(gameData);
     const hasStarted = gameData.data.state.value !== "waitingPlayers";
 

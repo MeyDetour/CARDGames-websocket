@@ -18,7 +18,8 @@ export default class CardManager {
     let cardList = [];
     for (const cardId of Object.keys(cards)) {
       const card = cards[cardId];
-      for (let i = 0; i < card.quantity; i++) {
+      
+      for (let i = 0; i < (card.quantity ?? 1); i++) {
         cardList.push(cardId);
       }
     }
