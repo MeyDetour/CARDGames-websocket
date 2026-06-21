@@ -279,9 +279,9 @@ export default class FunctionType extends TypeInterface {
 
       // ERROR HANDLING
       let matches = [];
-      let values = [];
+      let values = {};
       
-      arrayToCheck = arrayToCheck.map((id) => gameData.data.cards[id]?.addedAttributs || {});
+      arrayToCheck = arrayToCheck.map((id) => ({ id : id, ...gameData.data.cards[id]?.addedAttributs || {} }));
      if (params.fileLogger) {
         params.fileLogger.log(
           Parser.getDepthIndentation(params.depth) +
@@ -297,9 +297,11 @@ export default class FunctionType extends TypeInterface {
             params,
           ); 
         }
-        values.push(string);
-        if (values.filter((v) => v === string).length > 1) {
-          matches.push(string);
+        values[item[string]] = item.id;
+        if (TypeManager.isDefined(item[string]) ) {
+          matches.push(values[item[string]].id);
+          matches.push(item.id);
+          delete  values[item[string]]
         }
       }
 

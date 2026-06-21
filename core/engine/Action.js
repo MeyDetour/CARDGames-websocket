@@ -6,7 +6,7 @@ import CardManager from "../services/CardManager.js";
 import { TypeManager } from "../services/helper/TypeManager.js";
 import { ArrayManager } from "../services/helper/ArrayManager.js";
 import VariableType from "../../parser/VariableType.js";
-import { ObjectManager } from "../services/helper/ObjectManager.js"; 
+import { ObjectManager } from "../services/helper/ObjectManager.js";
 export default class Action {
   /**
    * Execute logical separation for access variable  ex currentPlayer#gain#1
@@ -498,7 +498,6 @@ export default class Action {
     }
   }
   giveElements() {
-    // Si pas de boucle, déléguer à giveElementsTo classique
     if (
       !this.boucleDataArray ||
       !Array.isArray(this.boucleDataArray) ||
@@ -508,19 +507,16 @@ export default class Action {
       return;
     }
 
+    // 1. FILTRER les joueurs éligibles
     const eligibleData = [];
     for (let i = 0; i < this.boucleDataArray.length; i++) {
-      if (this.fileLogger) {
-        this.fileLogger.log(
-          `\n🔄 Évaluation de l'itération ${i} pour giveElements`,
+      let [destinataireListObject, destinataire] =
+        PlayerManager.getDestinataireElement(
+          this.event,
+          this.gameData,
+          i,
+          this.params,
         );
-      }
-      let [destinataireListObject, destinataire] = PlayerManager.getDestinataireElement(
-        this.event,
-        this.gameData,
-        i,
-        this.params,
-      );
       let [senderListObject, sender] = PlayerManager.getSenderElement(
         this.event,
         this.gameData,
@@ -528,238 +524,125 @@ export default class Action {
         this.params,
       );
 
-      this.setDestinataireListObject(destinataireListObject);
-      this.setDestinataire(destinataire);
-      this.setSenderListObject(senderListObject);
-      this.setSender(sender);
-      this.setIndex(i);
-
       const condition = Parser.translateInnerExpression(
         this.boucleCondition,
         this.gameData,
         this.params,
       );
 
-      if (condition == false && TypeManager.isDefined(this.boucleCondition)) {
-        if (this.fileLogger) {
+      if (condition === false && TypeManager.isDefined(this.boucleCondition)) {
+        if (this.fileLogger)
           this.fileLogger.log(`Condition false at index ${i}, skipping`);
-          this.fileLogger.log(LoggerClass.pretty(destinataire));
-        }
         continue;
       }
-      if (this.fileLogger) {
-        this.fileLogger.log(
-          `Condition true at index ${i}, adding to eligibleData`,
-        );
-      }
+
       eligibleData.push({
         i,
         destinataireListObject,
         destinataire,
         senderListObject,
         sender,
-      }); if (this.fileLogger) {
-      this.fileLogger.log(
-        `Condition true at index ${i}, adding to eligibleData`,
-      );
+      });
     }
 
-    }
-   
     if (eligibleData.length === 0) {
       if (this.fileLogger)
         this.fileLogger.log("No eligible recipients after filtering");
       return;
     }
 
-    // 2. PARCOURIR chaque clé à distribuer
-    for (let key of Object.keys(this.giveElementsData)) {
-      // Calculer la quantité à distribuer (sur le premier destinataire éligible pour l'évaluation)
-      const first = eligibleData[0];
-      this.setDestinataireListObject(first.destinataireListObject);
-      this.setDestinataire(first.destinataire);
-      this.setSenderListObject(first.senderListObject);
-      this.setSender(first.sender);
-      this.setIndex(first.i);
+    // 2. Résoudre sum pour savoir le mode de distribution
+    // On prend la première clé pour déterminer le type (nombre ou array ou *)
 
-      let sum = Parser.translateInnerExpression(
+    for (let key of Object.keys(this.giveElementsData)) {
+
+      // KEY ====================================================================
+      //transform element to give like {gain#1} to array like ["gain","1"]
+      // get array like ["gain","1"]
+      let keyOfElementToGive = VariableType.getListSplited(
+        key,
+        this.gameData,
+        null
+      )}
+      //  {gain#1} -> ['gain','1']
+      //  {cards} -> ['cards'] 
+      if (this.fileLogger) {
+        this.fileLogger.log("keyToTransform :");
+        this.fileLogger.log(LoggerClass.pretty(keyToTransform));
+      }
+      //============================================================================
+
+
+      const sum = Parser.translateInnerExpression(
         this.giveElementsData[key],
         this.gameData,
         { ...this.params, location: this.fileLogger },
       );
-
+ 
       if (this.fileLogger) {
-        this.fileLogger.log("sum computed:");
+        this.fileLogger.log("sum");
         this.fileLogger.log(LoggerClass.pretty(sum));
       }
+      const isRoundRobin = !Array.isArray(sum) && sum!="*" ;
 
-      const isGiveAll = sum === "*";
-      const isArray = Array.isArray(sum);
-      const isNumber = !isGiveAll && !isArray && !isNaN(parseInt(sum));
-      const sumInt = isNumber ? parseInt(sum) : null;
+      if (isRoundRobin) {
+        // ROUND-ROBIN : 1 unité par joueur à chaque tour
+        // pour int 
 
-      if (key === "{cards}") {
-        // === DISTRIBUTION ROUND-ROBIN DE CARTES ===
-
-        if (isGiveAll) {
-          // "*" : distribuer TOUTES les cartes du sender en round-robin
-          // On a besoin du sender global (deck), pas par joueur
-          // Le sender est le même pour tous (ex: {deck}), on le récupère depuis le premier
-          const [senderListObject, senderSource] = PlayerManager.getSenderElement(
-            this.event,
-            this.gameData,
-            null,
-            this.params,
-          );
-          let senderObject = VariableType.splitLogicalList(
-            [senderSource],
-            this.gameData,
-            { returnType: "ref" },
-          );
-
-          if (!senderObject || !Array.isArray(senderObject.value)) {
-            const msg =
-              "giveElements: sender n'a pas de tableau de cartes pour '*'";
-            this.actionLogger.error(msg);
-            errorStack.addError(
-              msg,
-              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
-            );
-            return;
-          }
-
-          // Construire les objets destinataires pour chaque joueur éligible
-          const destinataireObjects = eligibleData.map(({ destinataire }) => {
-            let obj = VariableType.splitLogicalList(
-              [destinataire],
-              this.gameData,
-              { returnType: "ref", log: false },
-            );
-            return obj;
-          });
-
-          // Round-robin : distribuer toutes les cartes une par une
-          let cardIndex = 0;
-          const totalCards = senderObject.value.length;
-          const newSenderValue = structuredClone(senderObject.value);
-
-          while (newSenderValue.length > 0) {
-            const recipientIndex = cardIndex % eligibleData.length;
-            const card = newSenderValue.shift(); // prendre la première carte
-
-            if (!CardManager.getCard(this.gameData, card)) {
-              if (this.fileLogger)
-                this.fileLogger.log(`Card ${card} not found, skipping`);
-              cardIndex++;
-              continue;
-            }
-
-            destinataireObjects[recipientIndex]?.value?.push(card);
-
-            if (this.fileLogger) {
-              this.fileLogger.log(
-                `Round-robin: carte ${card} → joueur index ${recipientIndex}`,
-              );
-            }
-            cardIndex++;
-          }
-
-          // Vider le sender
-          senderObject.value = [];
-
-          // Sauvegarder les joueurs
-          for (const { destinataire, destinataireListObject } of eligibleData) {
-            PlayerManager.updatePlayerObject(
-              null,
-              this.gameData,
-              destinataireListObject,
-            );
-            // (le sender global sera mis à jour après)
-          }
-          // Mettre à jour le sender (deck)
-          PlayerManager.updatePlayerObject(
-            senderSource,
-            this.gameData,
-            senderListObject,
-          );
-        } else if (isNumber) {
-          // Nombre fixe de cartes : distribuer sumInt fois en round-robin
-          // Même logique : le sender est global (le deck)
-          const [senderListObject, senderSource] = Event.getSenderElement(
-            this.event,
-            this.gameData,
-            null,
-            this.params,
-          );
-          let senderObject = VariableType.splitLogicalList(
-            [senderSource],
-            this.gameData,
-            { returnType: "ref" },
-          );
-
-          if (!senderObject || !Array.isArray(senderObject.value)) {
-            const msg = "giveElements: sender n'a pas de tableau de cartes";
-            this.actionLogger.error(msg);
-            errorStack.addError(
-              msg,
-              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
-            );
-            return;
-          }
-
-          const destinataireObjects = eligibleData.map(({ destinataire }) =>
-            VariableType.splitLogicalList([destinataire], this.gameData, {
-              returnType: "ref",
-              log: false,
-            }),
-          );
-
-          // sumInt tours de distribution round-robin
-          const totalToDistribute = sumInt * eligibleData.length;
-          const newSenderValue = structuredClone(senderObject.value);
-
-          for (let turn = 0; turn < sumInt; turn++) {
-            for (let r = 0; r < eligibleData.length; r++) {
-              if (newSenderValue.length === 0) {
-                if (this.fileLogger)
-                  this.fileLogger.log("Deck vide, arrêt de la distribution");
-                break;
-              }
-              const card = newSenderValue.shift();
-              if (!CardManager.getCard(this.gameData, card)) {
-                if (this.fileLogger)
-                  this.fileLogger.log(`Card ${card} not found, skipping`);
-                r--; // réessayer avec la prochaine carte pour ce joueur
-                continue;
-              }
-              destinataireObjects[r]?.value?.push(card);
+        let   iterationCount = parseInt(sum);
+        
+           if (TypeManager.getType(sum) !== "number") {
+              const msg =
+                "Attemps to get int but got  " +
+                typeof sum +
+                " with " +
+                sum +
+                "Error in key " +
+                key;
+              this.actionLogger.error(msg);
+              LoggerClass.logFileLocalisation();
               if (this.fileLogger) {
-                this.fileLogger.log(
-                  `Tour ${turn + 1}: carte ${card} → joueur index ${r}`,
+                this.fileLogger.error(
+                  new Error(msg),
+                  "actions.js → giveElementsTo()",
                 );
               }
-            }
-          }
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
 
-          senderObject.value = newSenderValue;
-
-          // Sauvegarder
-          for (const { destinataireListObject } of eligibleData) {
-            PlayerManager.updatePlayerObject(
-              null,
-              this.gameData,
-              destinataireListObject,
-            );
-          }
-          PlayerManager.updatePlayerObject(
-            senderSource,
-            this.gameData,
-            senderListObject,
-          );
+              return;
         }
-      } else {
-        // === DISTRIBUTION D'UNE VALEUR NUMÉRIQUE (gain, ressource...) ===
-        // Ici pas de round-robin, on applique à chaque joueur indépendamment
+
+        for (let turn = 0; turn < iterationCount; turn++) {
+          for (const {
+            i,
+            destinataireListObject,
+            destinataire,
+            senderListObject,
+            sender,
+          } of eligibleData) {
+            this.setDestinataireListObject(destinataireListObject);
+            this.setDestinataire(destinataire);
+            this.setSenderListObject(senderListObject);
+            this.setSender(sender);
+            this.setIndex(i);
+            // On override temporairement giveElementsData pour donner 1 à la fois
+            const savedGiveElementsData = this.giveElementsData;
+            this.giveElementsData = { [firstKey]: 1 };
+            this.giveElementsTo(keyOfElementToGive,1);
+            this.giveElementsData = savedGiveElementsData;
+          }
+        }
+      }
+      elif(sum === "*") {
+      }
+      else {
+         
+
+
+        // BATCH (array) : tout donner joueur par joueur
         for (const {
           i,
           destinataireListObject,
@@ -772,42 +655,13 @@ export default class Action {
           this.setSenderListObject(senderListObject);
           this.setSender(sender);
           this.setIndex(i);
-
-          // Recalculer sum pour chaque joueur (au cas où l'expression dépend du joueur courant)
-          let sumPerPlayer = Parser.translateInnerExpression(
-            this.giveElementsData[key],
-            this.gameData,
-            { ...this.params, location: this.fileLogger },
-          );
-
-          this.giveElementsTo();
+          this.giveElementsTo(keyOfElementToGive,sum);
         }
       }
     }
   }
-  giveElementsTo() {
-    if (this.fileLogger) {
-      this.fileLogger.log(
-        "GiveElementTo , called with element :" +
-          LoggerClass.getKeyOfObject(this.params),
-      );
-      LoggerClass.logGridFromObject(
-        {
-          Sender: typeof this.sender,
-          "Sender List Object": typeof this.senderListObject,
-          Destinataire: typeof this.destinataire,
-          "Destinataire List Object": typeof this.destinataireListObject,
-          "Give Elements": typeof this.giveElementsData,
-          Socket: typeof this.socket,
-          "Game Data": typeof this.gameData,
-          Params: typeof this.params,
-          Logs: typeof this.logs,
-          Index: typeof this.index,
-        },
-        "🔄 GiveElementTo PARAMS",
-        this.fileLogger,
-      );
-
+  giveElementsTo(keyToTransform, sum) {
+    if (this.fileLogger) { 
       LoggerClass.logGridFromObject(
         {
           Sender: this.sender,
@@ -819,26 +673,16 @@ export default class Action {
     }
 
     let beforeGameData = structuredClone(this.gameData.data);
-
-    // PARCOURIR TOUS LES ELEMENTS A DONNER
-    for (let key of Object.keys(this.giveElementsData)) {
-      //transform element to give like {gain#1} to array like ["gain","1"]
-      // get array like ["gain","1"]
-      let keyToTransform = VariableType.getListSplited(
-        key,
-        this.gameData,
-        null,
-      );
-      //  {gain#1} -> ['gain','1']
-      //  {cards} -> ['cards']
-      if (this.fileLogger) {
-        this.fileLogger.log("keyToTransform :");
-        this.fileLogger.log(LoggerClass.pretty(keyToTransform));
-      }
+ 
+   
 
       //  INITIALIZED SENDER =======================
       let senderObject = null;
       if (TypeManager.isDefined(this.sender)) {
+        // si on ne donne pas de cartes
+        // on veut acceder à la propriété du joueur
+        // ex give {gain#1} to {playerBoucle}
+        // alors on veut {playerBoucle#gain#1}
         if (keyToTransform[0] != "cards") {
           senderObject = VariableType.splitLogicalList(
             [this.sender, ...keyToTransform],
@@ -846,11 +690,10 @@ export default class Action {
             { returnType: "ref" },
           );
         } else {
-          senderObject = VariableType.splitLogicalList(
-            [this.sender],
-            this.gameData,
-            { returnType: "ref" },
-          );
+          // si on donne des cartes, 
+          // on ne veut pas accéder à la propriété cards du sender, 
+          // mais au sender lui-même
+          senderObject =  this.sender 
         }
 
         if (!TypeManager.isDefined(senderObject)) {
@@ -862,6 +705,10 @@ export default class Action {
       // INITIALIZE DESTINATAIRE =================================
       let destinataireObject = null;
       if (TypeManager.isDefined(this.destinataire)) {
+       // si on ne donne pas de cartes
+        // on veut acceder à la propriété du joueur
+        // ex give {gain#1} to {playerBoucle}
+        // alors on veut {playerBoucle#gain#1}
         if (keyToTransform[0] != "cards") {
           destinataireObject = VariableType.splitLogicalList(
             [this.destinataire, ...keyToTransform],
@@ -869,11 +716,10 @@ export default class Action {
             { returnType: "ref", log: false },
           );
         } else {
-          destinataireObject = VariableType.splitLogicalList(
-            [this.destinataire],
-            this.gameData,
-            { returnType: "ref", log: false },
-          );
+          // si on donne des cartes, 
+          // on ne veut pas accéder à la propriété cards du sender, 
+          // mais au sender lui-même
+            destinataireObject = this.destinataire; 
         }
 
         if (!TypeManager.isDefined(destinataireObject)) {
@@ -896,22 +742,210 @@ export default class Action {
 
       // START MANIP ==========================================
 
-      //  GET QUANTITY TO GIVE
-      let sum = Parser.translateInnerExpression(
-        this.giveElementsData[key],
-        this.gameData,
-        {
-          ...this.params,
-          location: this.fileLogger,
-        },
-      );
-      if (this.fileLogger) {
-        this.fileLogger.log("sum");
-        this.fileLogger.log(LoggerClass.pretty(sum));
-      }
+       
+      // IF WE WANT TO GIVE A SPECIFIC QUANTITY
+      
+        sum = parseInt(sum);
 
-      // IF WE WANT TO GIVE ALL
-      const exceptions = ["*"];
+        // IF SUM IS NOT A NUMBER
+      
+
+        // IF THERE IS SENDER
+        if (
+          TypeManager.isDefined(senderObject) &&
+          TypeManager.getType(senderObject.value) === "number"
+        ) {
+          // SUBSTRACT HIS SUM IF HE DONT HAVE ENOUG
+          if (senderObject.value < sum) {
+            if (
+              senderObject.params &&
+              senderObject.params["ifFromStackDoesNotHaveRessource"] &&
+              senderObject.params["ifFromStackDoesNotHaveRessource"].value
+            ) {
+              if (
+                senderObject.params["ifFromStackDoesNotHaveRessource"][
+                  "giveAllRessourcePossible"
+                ]
+              ) {
+                sum = senderObject.value;
+                senderObject.value = 0;
+              }
+              if (
+                senderObject.params["ifFromStackDoesNotHaveRessource"][
+                  "doEvents"
+                ]
+              ) {
+                for (const eventId of senderObject.params[
+                  "ifFromStackDoesNotHaveRessource"
+                ]["doEvents"]) {
+                  Event.actions.jsId(eventId, socket, gameData);
+                }
+              }
+            }
+          } else {
+            // SUBSTRACT REAL SUMIS HE HAS
+            senderObject.value -= sum;
+          }
+          // SAVE ACTION LOG FOR TEST
+          if (this.gameData.data.isTest) {
+            this.actionEventForTest.diffs.push({
+              key: PlayerManager.isPlayerType(this.sender, this.gameData)
+                ? this.sender.pseudo
+                : this.event.event.from,
+              type: "number",
+              id: "eflookpmmmort5123",
+              before: structuredClone(senderObjectSave.value),
+              after: structuredClone(senderObject.value),
+            });
+          }
+        }
+        // If WE GIVE FIXE NUMBER OF CARD
+        if (keyToTransform[0] === "cards") {
+          let newSenderObjectValue = structuredClone(senderObject.value);
+          if (this.fileLogger) {
+            LoggerClass.logGridFromObject(
+              {
+                "New Sender Object Value before": newSenderObjectValue,
+                "senderObject value ": senderObject.value,
+              },
+              "COPY ALL CARDS - BEFORE LOOP",
+              this.fileLogger,
+            );
+          }
+          for (let n = 0; n < sum; n++) {
+            // Sender donne des cartes une par une à Destinataire
+            if (!senderObject) {
+              if (this.fileLogger) {
+                this.fileLogger.log("No sender,   ");
+              }
+              continue;
+            }
+            if (senderObject.value.length === 0) {
+              if (this.fileLogger) {
+                this.fileLogger.log("Sender value empty  ");
+              }
+              continue;
+            }
+
+            if (senderObject.value[n]) {
+              if (this.fileLogger) {
+                this.fileLogger.log(
+                  "Give card id  " + senderObject.value[n] + " to destinataire",
+                );
+              }
+
+              destinataireObject?.value?.push(senderObject.value[n]);
+              newSenderObjectValue.splice(n, 1);
+            }
+
+            senderObject.value = newSenderObjectValue;
+          }
+
+          // SAVE ACTION LOG FOR TEST
+          if (this.gameData.data.isTest && senderObject) {
+            this.actionEventForTest.diffs.push({
+              key: PlayerManager.isPlayerType(this.sender, this.gameData)
+                ? this.sender.pseudo
+                : this.event.event.from,
+              type: senderObject.type,
+              message: "Give " + sum + " cards to destinataire",
+              id: "ppkzeort5123",
+              before: structuredClone(senderObjectSave.value),
+              after: structuredClone(newSenderObjectValue),
+            });
+          }
+          if (this.gameData.data.isTest) {
+            this.actionEventForTest.diffs.push({
+              key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
+                ? this.destinataire.pseudo
+                : this.event.event.for,
+              type: destinataireObject?.type,
+              message: "Receive " + sum + " cards from sender",
+              id: "435545grerg",
+              before: structuredClone(destinataireObjectSave.value),
+              after: structuredClone(destinataireObject.value),
+            });
+          }
+        }
+        //END : If WE GIVE FIXE NUMBER WITHOYUT SENDER
+        else {
+          destinataireObject.value += sum;
+          if (this.gameData.data.isTest) {
+            this.actionEventForTest.diffs.push({
+              key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
+                ? this.destinataire.pseudo
+                : this.event.event.for,
+              type: "number",
+              id: "e5443655155",
+              before: structuredClone(destinataireObjectSave.value),
+              after: structuredClone(destinataireObject.value),
+            });
+          }
+        }
+      }
+      // END OF  IF WE WANT TO GIVE A SPECIFIC QUANTITY
+
+      // SAVER
+      PlayerManager.updatePlayerObject(
+        this.sender,
+        this.gameData,
+        this.SenderListObject,
+      );
+      PlayerManager.updatePlayerObject(
+        this.destinataire,
+        this.gameData,
+        this.destinataireListObject,
+      );
+
+      // logs de resultats
+      if (this.fileLogger) {
+        LoggerClass.logGridFromObject(
+          {
+            "Destinataire Liste": this.destinataireListObject,
+            "Destinataire Object": destinataireObject,
+            Destinataire: this.destinataire,
+          },
+          "DESTINATAIRE AFTER GIVE ELEMENT",
+          this.fileLogger,
+        );
+
+        LoggerClass.logGridFromObject(
+          {
+            "Sender Liste": this.SenderListObject,
+            "Sender Object": senderObject,
+            Sender: this.sender,
+          },
+          "SENDER AFTER GIVE ELEMENT",
+          this.fileLogger,
+        );
+
+        this.fileLogger.log("Data ");
+        this.fileLogger.log(LoggerClass.pretty(this.gameData.data.players));
+
+        if (this.index) {
+          this.fileLogger.log("Resultat des modifications ");
+          for (let player of this.gameData.data.players) {
+            this.fileLogger.log(LoggerClass.pretty(player));
+            this.actionLogger.info("Effectué x" + this.index);
+            this.fileLogger.log(
+              "✅ GiveElementsTo effectué x" + this.index + ".",
+            );
+          }
+        }
+
+        LoggerClass.logGridOldNew(
+          beforeGameData,
+          this.gameData.data,
+          this.fileLogger,
+        );
+
+        this.actionLogger.info("Effectué ");
+        this.fileLogger.log("✅ GiveElementsTo effectué.");
+       // fin logs de resultats
+    
+  }
+  giveEntireElement(){
+    const exceptions = ["*"];
       if (exceptions.includes(sum)) {
         if (Array.isArray(destinataireObject.value)) {
           // If no sender
@@ -1075,8 +1109,9 @@ export default class Action {
           }
         }
       }
-      //IF WE WANT TO GIVE FIXE ELEMENT
-      if (Array.isArray(sum)) {
+  }
+  giveAnArrayOfElements() {
+    if (Array.isArray(sum)) {
         // Debut des logs de fin d'action
         if (this.fileLogger) {
           this.fileLogger.log("Sum : " + JSON.stringify(sum));
@@ -1107,7 +1142,9 @@ export default class Action {
             LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
           );
           return;
-        } // if destinataire  but destinataire value is not array
+        }
+
+        // if destinataire  but destinataire value is not array
         if (
           TypeManager.isDefined(destinataireObject) &&
           TypeManager.getType(destinataireObject.value) !== "array"
@@ -1140,8 +1177,9 @@ export default class Action {
           TypeManager.getType(senderObject.value) === "array"
         ) {
           // throw away only element that sender have in his value
+          // works with card because with store only card id
           senderObject.value = senderObject.value.filter(
-            (elt) => !sum.includes(elt),
+            (elt) => !sum.includes(elt) || !sum.includes(String(elt)),
           );
 
           // SAVE ACTION LOG FOR TEST
@@ -1186,244 +1224,5 @@ export default class Action {
           }
         }
       }
-      // IF WE WANT TO GIVE A SPECIFIC QUANTITY
-      if (
-        !exceptions.includes(sum) &&
-        (TypeManager.getType(sum) === "string" ||
-          TypeManager.getType(sum) === "number")
-      ) {
-        sum = parseInt(sum);
-
-        // IF SUM IS NOT A NUMBER
-        if (TypeManager.getType(sum) !== "number") {
-          const msg =
-            "Attemps to get int but got  " +
-            typeof sum +
-            " with " +
-            sum +
-            "Error in key " +
-            key;
-          this.actionLogger.error(msg);
-          LoggerClass.logFileLocalisation();
-          if (this.fileLogger) {
-            this.fileLogger.error(
-              new Error(msg),
-              "actions.js → giveElementsTo()",
-            );
-          }
-          errorStack.addError(
-            msg,
-            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
-          );
-
-          return;
-        }
-
-        // Debut des logs de fin d'action
-        if (this.fileLogger) {
-          this.fileLogger.log("Sum : " + sum);
-          if (senderObject) {
-            this.fileLogger.log(
-              "type of senderobject value " +
-                TypeManager.getType(senderObject.value) +
-                " reel type " +
-                typeof senderObject.value,
-            );
-          }
-        }
-
-        // IF THERE IS SENDER
-        if (
-          TypeManager.isDefined(senderObject) &&
-          TypeManager.getType(senderObject.value) === "number"
-        ) {
-          // SUBSTRACT HIS SUM IF HE DONT HAVE ENOUG
-          if (senderObject.value < sum) {
-            if (
-              senderObject.params &&
-              senderObject.params["ifFromStackDoesNotHaveRessource"] &&
-              senderObject.params["ifFromStackDoesNotHaveRessource"].value
-            ) {
-              if (
-                senderObject.params["ifFromStackDoesNotHaveRessource"][
-                  "giveAllRessourcePossible"
-                ]
-              ) {
-                sum = senderObject.value;
-                senderObject.value = 0;
-              }
-              if (
-                senderObject.params["ifFromStackDoesNotHaveRessource"][
-                  "doEvents"
-                ]
-              ) {
-                for (const eventId of senderObject.params[
-                  "ifFromStackDoesNotHaveRessource"
-                ]["doEvents"]) {
-                  Event.actions.jsId(eventId, socket, gameData);
-                }
-              }
-            }
-          } else {
-            // SUBSTRACT REAL SUMIS HE HAS
-            senderObject.value -= sum;
-          }
-          // SAVE ACTION LOG FOR TEST
-          if (this.gameData.data.isTest) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.sender, this.gameData)
-                ? this.sender.pseudo
-                : this.event.event.from,
-              type: "number",
-              id: "eflookpmmmort5123",
-              before: structuredClone(senderObjectSave.value),
-              after: structuredClone(senderObject.value),
-            });
-          }
-        }
-        // If WE GIVE FIXE NUMBER OF CARD
-        if (key === "{cards}") {
-          let newSenderObjectValue = structuredClone(senderObject.value);
-          if (this.fileLogger) {
-            LoggerClass.logGridFromObject(
-              {
-                "New Sender Object Value before": newSenderObjectValue,
-                "senderObject value ": senderObject.value,
-              },
-              "COPY ALL CARDS - BEFORE LOOP",
-              this.fileLogger,
-            );
-          }
-          for (let n = 0; n < sum; n++) {
-            // Sender donne des cartes une par une à Destinataire
-            if (!senderObject) {
-              if (this.fileLogger) {
-                this.fileLogger.log("No sender,   ");
-              }
-              continue;
-            }
-            if (senderObject.value.length === 0) {
-              if (this.fileLogger) {
-                this.fileLogger.log("Sender value empty  ");
-              }
-              continue;
-            }
-
-            if (senderObject.value[n]) {
-              if (this.fileLogger) {
-                this.fileLogger.log(
-                  "Give card id  " + senderObject.value[n] + " to destinataire",
-                );
-              }
-
-              destinataireObject?.value?.push(senderObject.value[n]);
-              newSenderObjectValue.splice(n, 1);
-            }
-
-            senderObject.value = newSenderObjectValue;
-          }
-
-          // SAVE ACTION LOG FOR TEST
-          if (this.gameData.data.isTest && senderObject) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.sender, this.gameData)
-                ? this.sender.pseudo
-                : this.event.event.from,
-              type: senderObject.type,
-              message: "Give " + sum + " cards to destinataire",
-              id: "ppkzeort5123",
-              before: structuredClone(senderObjectSave.value),
-              after: structuredClone(newSenderObjectValue),
-            });
-          }
-          if (this.gameData.data.isTest) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
-                ? this.destinataire.pseudo
-                : this.event.event.for,
-              type: destinataireObject?.type,
-              message: "Receive " + sum + " cards from sender",
-              id: "435545grerg",
-              before: structuredClone(destinataireObjectSave.value),
-              after: structuredClone(destinataireObject.value),
-            });
-          }
-        }
-        //END : If WE GIVE FIXE NUMBER OF CARD
-        else {
-          destinataireObject.value += sum;
-          if (this.gameData.data.isTest) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
-                ? this.destinataire.pseudo
-                : this.event.event.for,
-              type: "number",
-              id: "e5443655155",
-              before: structuredClone(destinataireObjectSave.value),
-              after: structuredClone(destinataireObject.value),
-            });
-          }
-        }
-      }
-      // END OF  IF WE WANT TO GIVE A SPECIFIC QUANTITY
-
-      // SAVER
-      PlayerManager.updatePlayerObject(
-        this.sender,
-        this.gameData,
-        this.SenderListObject,
-      );
-      PlayerManager.updatePlayerObject(
-        this.destinataire,
-        this.gameData,
-        this.destinataireListObject,
-      );
-
-      // logs de resultats
-      if (this.fileLogger) {
-        LoggerClass.logGridFromObject(
-          {
-            "Destinataire Liste": this.destinataireListObject,
-            "Destinataire Object": destinataireObject,
-            Destinataire: this.destinataire,
-          },
-          "DESTINATAIRE AFTER GIVE ELEMENT",
-          this.fileLogger,
-        );
-
-        LoggerClass.logGridFromObject(
-          {
-            "Sender Liste": this.SenderListObject,
-            "Sender Object": senderObject,
-            Sender: this.sender,
-          },
-          "SENDER AFTER GIVE ELEMENT",
-          this.fileLogger,
-        );
-
-        this.fileLogger.log("Data ");
-        this.fileLogger.log(LoggerClass.pretty(this.gameData.data.players));
-
-        if (this.index) {
-          this.fileLogger.log("Resultat des modifications ");
-          for (let player of this.gameData.data.players) {
-            this.fileLogger.log(LoggerClass.pretty(player));
-            this.actionLogger.info("Effectué x" + this.index);
-            this.fileLogger.log(
-              "✅ GiveElementsTo effectué x" + this.index + ".",
-            );
-          }
-        }
-
-        LoggerClass.logGridOldNew(
-          beforeGameData,
-          this.gameData.data,
-          this.fileLogger,
-        );
-
-        this.actionLogger.info("Effectué ");
-        this.fileLogger.log("✅ GiveElementsTo effectué.");
-      } // fin logs de resultats
-    }
   }
 }
