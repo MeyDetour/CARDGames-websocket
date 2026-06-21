@@ -341,6 +341,7 @@ export default class Event {
       actionObject.setDestinataire(destinataire);
       actionObject.setSenderListObject(senderListObject);
       actionObject.setSender(sender);
+      
 
       if (fileLogger) {
         LoggerClass.logGridFromObject(
@@ -357,20 +358,7 @@ export default class Event {
         );
       }
       if (giveElements && destinataire) {
-        actionObject.giveElementsTo(
-          sender,
-          destinataire,
-          destinataireListObject,
-          giveElements,
-          socket,
-          gameData,
-          {
-            giveElementsLog: giveElementsLog,
-            globalEventLog: globalEventLog,
-            resultOfEventsLog: resultOfEventsLog,
-          },
-          params,
-          null,
+        actionObject.giveElements( 
         );
       }
       if (action) {

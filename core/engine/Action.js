@@ -503,7 +503,9 @@ export default class Action {
       !Array.isArray(this.boucleDataArray) ||
       this.boucleDataArray.length === 0
     ) {
-      this.giveElementsTo();
+      for (let key of Object.keys(this.giveElementsData)) {
+        this.giveElementsTo(key,this.giveElementsData[key]);
+      }
       return;
     }
 
@@ -555,64 +557,62 @@ export default class Action {
     // On prend la première clé pour déterminer le type (nombre ou array ou *)
 
     for (let key of Object.keys(this.giveElementsData)) {
-
       // KEY ====================================================================
       //transform element to give like {gain#1} to array like ["gain","1"]
       // get array like ["gain","1"]
       let keyOfElementToGive = VariableType.getListSplited(
         key,
         this.gameData,
-        null
-      )}
+        null,
+      );
       //  {gain#1} -> ['gain','1']
-      //  {cards} -> ['cards'] 
+      //  {cards} -> ['cards']
       if (this.fileLogger) {
         this.fileLogger.log("keyToTransform :");
         this.fileLogger.log(LoggerClass.pretty(keyToTransform));
       }
       //============================================================================
 
-
       const sum = Parser.translateInnerExpression(
         this.giveElementsData[key],
         this.gameData,
         { ...this.params, location: this.fileLogger },
       );
- 
+
       if (this.fileLogger) {
         this.fileLogger.log("sum");
         this.fileLogger.log(LoggerClass.pretty(sum));
       }
-      const isRoundRobin = !Array.isArray(sum) && sum!="*" ;
+      const isRoundRobin = !Array.isArray(sum) && sum != "*";
 
       if (isRoundRobin) {
         // ROUND-ROBIN : 1 unité par joueur à chaque tour
-        // pour int 
+        // pour int
 
-        let   iterationCount = parseInt(sum);
-        
-           if (TypeManager.getType(sum) !== "number") {
-              const msg =
-                "Attemps to get int but got  " +
-                typeof sum +
-                " with " +
-                sum +
-                "Error in key " +
-                key;
-              this.actionLogger.error(msg);
-              LoggerClass.logFileLocalisation();
-              if (this.fileLogger) {
-                this.fileLogger.error(
-                  new Error(msg),
-                  "actions.js → giveElementsTo()",
-                );
-              }
-              errorStack.addError(
-                msg,
-                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
-              );
+        let iterationCount = parseInt(sum);
 
-              return;
+        if (TypeManager.getType(sum) !== "number") {
+          const msg =
+            "Attemps to get int but got  " +
+            typeof sum +
+            " with " +
+            sum +
+            "Error in key " +
+            key;
+          this.actionLogger.error(msg);
+          LoggerClass.logFileLocalisation();
+          if (this.fileLogger) {
+            this.fileLogger.error(
+              new Error(msg),
+              "actions.js → giveElementsTo()",
+            );
+          }
+          errorStack.addError(
+            msg,
+            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+          );
+
+          return;
         }
 
         for (let turn = 0; turn < iterationCount; turn++) {
@@ -630,18 +630,16 @@ export default class Action {
             this.setIndex(i);
             // On override temporairement giveElementsData pour donner 1 à la fois
             const savedGiveElementsData = this.giveElementsData;
-            this.giveElementsData = { [firstKey]: 1 };
-            this.giveElementsTo(keyOfElementToGive,1);
+            this.giveElementsData = { [keyOfElementToGive]: 1 };
+            this.giveElementsTo(keyOfElementToGive, 1);
             this.giveElementsData = savedGiveElementsData;
           }
         }
-      }
-      elif(sum === "*") {
-      }
-      else {
-         
-
-
+      } else if (sum === "*") {
+        // Mode Épuisement de la source :
+        // distribution à tous les joueurs jusqua la fin de la ressource
+        this.giveEntireElement(keyOfElementToGive, sum, eligibleData);
+      } else {
         // BATCH (array) : tout donner joueur par joueur
         for (const {
           i,
@@ -655,13 +653,13 @@ export default class Action {
           this.setSenderListObject(senderListObject);
           this.setSender(sender);
           this.setIndex(i);
-          this.giveElementsTo(keyOfElementToGive,sum);
+          this.giveElementsTo(keyOfElementToGive, sum);
         }
       }
     }
   }
   giveElementsTo(keyToTransform, sum) {
-    if (this.fileLogger) { 
+    if (this.fileLogger) {
       LoggerClass.logGridFromObject(
         {
           Sender: this.sender,
@@ -673,556 +671,727 @@ export default class Action {
     }
 
     let beforeGameData = structuredClone(this.gameData.data);
- 
-   
 
-      //  INITIALIZED SENDER =======================
-      let senderObject = null;
-      if (TypeManager.isDefined(this.sender)) {
-        // si on ne donne pas de cartes
-        // on veut acceder à la propriété du joueur
-        // ex give {gain#1} to {playerBoucle}
-        // alors on veut {playerBoucle#gain#1}
-        if (keyToTransform[0] != "cards") {
-          senderObject = VariableType.splitLogicalList(
-            [this.sender, ...keyToTransform],
-            this.gameData,
-            { returnType: "ref" },
-          );
-        } else {
-          // si on donne des cartes, 
-          // on ne veut pas accéder à la propriété cards du sender, 
-          // mais au sender lui-même
-          senderObject =  this.sender 
+    //  INITIALIZED SENDER =======================
+    let senderObject = null;
+    if (TypeManager.isDefined(this.sender)) {
+      // si on ne donne pas de cartes
+      // on veut acceder à la propriété du joueur
+      // ex give {gain#1} to {playerBoucle}
+      // alors on veut {playerBoucle#gain#1}
+      if (keyToTransform[0] != "cards") {
+        senderObject = VariableType.splitLogicalList(
+          [this.sender, ...keyToTransform],
+          this.gameData,
+          { returnType: "ref" },
+        );
+      } else {
+        // si on donne des cartes,
+        // on ne veut pas accéder à la propriété cards du sender,
+        // mais au sender lui-même
+        senderObject = this.sender;
+      }
+
+      if (!TypeManager.isDefined(senderObject)) {
+        senderObject = this.sender;
+      }
+    }
+    const senderObjectSave = structuredClone(senderObject);
+
+    // INITIALIZE DESTINATAIRE =================================
+    let destinataireObject = null;
+    if (TypeManager.isDefined(this.destinataire)) {
+      // si on ne donne pas de cartes
+      // on veut acceder à la propriété du joueur
+      // ex give {gain#1} to {playerBoucle}
+      // alors on veut {playerBoucle#gain#1}
+      if (keyToTransform[0] != "cards") {
+        destinataireObject = VariableType.splitLogicalList(
+          [this.destinataire, ...keyToTransform],
+          this.gameData,
+          { returnType: "ref", log: false },
+        );
+      } else {
+        // si on donne des cartes,
+        // on ne veut pas accéder à la propriété cards du sender,
+        // mais au sender lui-même
+        destinataireObject = this.destinataire;
+      }
+
+      if (!TypeManager.isDefined(destinataireObject)) {
+        destinataireObject = this.destinataire;
+      }
+    }
+    const destinataireObjectSave = structuredClone(destinataireObject);
+
+    // LOG ====================================
+    if (this.fileLogger) {
+      LoggerClass.logGridFromObject(
+        {
+          "Destinataire object": destinataireObject,
+          "Sender Object": senderObject,
+        },
+        "APPLICATION DES CLES ",
+        this.fileLogger,
+      );
+    }
+
+    // START MANIP ==========================================
+
+    // IF WE WANT TO GIVE A SPECIFIC QUANTITY
+
+    sum = parseInt(sum);
+
+    // IF SUM IS NOT A NUMBER
+
+    // IF THERE IS SENDER
+    if (
+      TypeManager.isDefined(senderObject) &&
+      TypeManager.getType(senderObject.value) === "number"
+    ) {
+      // SUBSTRACT HIS SUM IF HE DONT HAVE ENOUG
+      if (senderObject.value < sum) {
+        if (
+          senderObject.params &&
+          senderObject.params["ifFromStackDoesNotHaveRessource"] &&
+          senderObject.params["ifFromStackDoesNotHaveRessource"].value
+        ) {
+          if (
+            senderObject.params["ifFromStackDoesNotHaveRessource"][
+              "giveAllRessourcePossible"
+            ]
+          ) {
+            sum = senderObject.value;
+            senderObject.value = 0;
+          }
+          if (
+            senderObject.params["ifFromStackDoesNotHaveRessource"]["doEvents"]
+          ) {
+            for (const eventId of senderObject.params[
+              "ifFromStackDoesNotHaveRessource"
+            ]["doEvents"]) {
+              Event.actions.jsId(eventId, socket, gameData);
+            }
+          }
+        }
+      } else {
+        // SUBSTRACT REAL SUMIS HE HAS
+        senderObject.value -= sum;
+      }
+      // SAVE ACTION LOG FOR TEST
+      if (this.gameData.data.isTest) {
+        this.actionEventForTest.diffs.push({
+          key: PlayerManager.isPlayerType(this.sender, this.gameData)
+            ? this.sender.pseudo
+            : this.event.event.from,
+          type: "number",
+          id: "eflookpmmmort5123",
+          before: structuredClone(senderObjectSave.value),
+          after: structuredClone(senderObject.value),
+        });
+      }
+    }
+    // If WE GIVE FIXE NUMBER OF CARD
+    if (keyToTransform[0] === "cards") {
+      let newSenderObjectValue = structuredClone(senderObject.value);
+      if (this.fileLogger) {
+        LoggerClass.logGridFromObject(
+          {
+            "New Sender Object Value before": newSenderObjectValue,
+            "senderObject value ": senderObject.value,
+          },
+          "COPY ALL CARDS - BEFORE LOOP",
+          this.fileLogger,
+        );
+      }
+      for (let n = 0; n < sum; n++) {
+        // Sender donne des cartes une par une à Destinataire
+        if (!senderObject) {
+          if (this.fileLogger) {
+            this.fileLogger.log("No sender,   ");
+          }
+          continue;
+        }
+        if (senderObject.value.length === 0) {
+          if (this.fileLogger) {
+            this.fileLogger.log("Sender value empty  ");
+          }
+          continue;
         }
 
-        if (!TypeManager.isDefined(senderObject)) {
-          senderObject = this.sender;
+        if (senderObject.value[n]) {
+          if (this.fileLogger) {
+            this.fileLogger.log(
+              "Give card id  " + senderObject.value[n] + " to destinataire",
+            );
+          }
+
+          destinataireObject?.value?.push(senderObject.value[n]);
+          newSenderObjectValue.splice(n, 1);
+        }
+
+        senderObject.value = newSenderObjectValue;
+      }
+
+      // SAVE ACTION LOG FOR TEST
+      if (this.gameData.data.isTest && senderObject) {
+        this.actionEventForTest.diffs.push({
+          key: PlayerManager.isPlayerType(this.sender, this.gameData)
+            ? this.sender.pseudo
+            : this.event.event.from,
+          type: senderObject.type,
+          message: "Give " + sum + " cards to destinataire",
+          id: "ppkzeort5123",
+          before: structuredClone(senderObjectSave.value),
+          after: structuredClone(newSenderObjectValue),
+        });
+      }
+      if (this.gameData.data.isTest) {
+        this.actionEventForTest.diffs.push({
+          key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
+            ? this.destinataire.pseudo
+            : this.event.event.for,
+          type: destinataireObject?.type,
+          message: "Receive " + sum + " cards from sender",
+          id: "435545grerg",
+          before: structuredClone(destinataireObjectSave.value),
+          after: structuredClone(destinataireObject.value),
+        });
+      }
+    }
+    //END : If WE GIVE FIXE NUMBER WITHOYUT SENDER
+    else {
+      destinataireObject.value += sum;
+      if (this.gameData.data.isTest) {
+        this.actionEventForTest.diffs.push({
+          key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
+            ? this.destinataire.pseudo
+            : this.event.event.for,
+          type: "number",
+          id: "e5443655155",
+          before: structuredClone(destinataireObjectSave.value),
+          after: structuredClone(destinataireObject.value),
+        });
+      }
+    }
+
+    // END OF  IF WE WANT TO GIVE A SPECIFIC QUANTITY
+
+    // SAVER
+    PlayerManager.updatePlayerObject(
+      this.sender,
+      this.gameData,
+      this.SenderListObject,
+    );
+    PlayerManager.updatePlayerObject(
+      this.destinataire,
+      this.gameData,
+      this.destinataireListObject,
+    );
+
+    // logs de resultats
+    if (this.fileLogger) {
+      LoggerClass.logGridFromObject(
+        {
+          "Destinataire Liste": this.destinataireListObject,
+          "Destinataire Object": destinataireObject,
+          Destinataire: this.destinataire,
+        },
+        "DESTINATAIRE AFTER GIVE ELEMENT",
+        this.fileLogger,
+      );
+
+      LoggerClass.logGridFromObject(
+        {
+          "Sender Liste": this.SenderListObject,
+          "Sender Object": senderObject,
+          Sender: this.sender,
+        },
+        "SENDER AFTER GIVE ELEMENT",
+        this.fileLogger,
+      );
+
+      this.fileLogger.log("Data ");
+      this.fileLogger.log(LoggerClass.pretty(this.gameData.data.players));
+
+      if (this.index) {
+        this.fileLogger.log("Resultat des modifications ");
+        for (let player of this.gameData.data.players) {
+          this.fileLogger.log(LoggerClass.pretty(player));
+          this.actionLogger.info("Effectué x" + this.index);
+          this.fileLogger.log(
+            "✅ GiveElementsTo effectué x" + this.index + ".",
+          );
         }
       }
-      const senderObjectSave = structuredClone(senderObject);
 
-      // INITIALIZE DESTINATAIRE =================================
-      let destinataireObject = null;
-      if (TypeManager.isDefined(this.destinataire)) {
-       // si on ne donne pas de cartes
-        // on veut acceder à la propriété du joueur
-        // ex give {gain#1} to {playerBoucle}
-        // alors on veut {playerBoucle#gain#1}
-        if (keyToTransform[0] != "cards") {
-          destinataireObject = VariableType.splitLogicalList(
-            [this.destinataire, ...keyToTransform],
+      LoggerClass.logGridOldNew(
+        beforeGameData,
+        this.gameData.data,
+        this.fileLogger,
+      );
+
+      this.actionLogger.info("Effectué ");
+      this.fileLogger.log("✅ GiveElementsTo effectué.");
+      // fin logs de resultats
+    }
+  }
+  giveEntireElement(keyToTransform, sum, eligibleData = []) {
+    const key = keyToTransform ? `{${keyToTransform[0]}}` : "";
+
+    if (this.fileLogger) {
+      LoggerClass.logGridFromObject(
+        { Sender: this.sender, Destinataire: this.destinataire },
+        "AVANT giveEntireElement (Distribution circulaire jusqu'à épuisement)",
+        this.fileLogger,
+      );
+    }
+
+    let beforeGameData = structuredClone(this.gameData.data);
+
+    // Si aucun joueur éligible n'est passé (appel direct hors boucle), on crée un lot unique avec le destinataire actuel
+    if (eligibleData.length === 0) {
+      eligibleData = [
+        {
+          i: this.index,
+          destinataireListObject: this.destinataireListObject,
+          destinataire: this.destinataire,
+          senderListObject: this.senderListObject,
+          sender: this.sender,
+        },
+      ];
+    }
+
+    // 1. INITIALISATION ET SAUVEGARDE DU SENDER GLOBAL =======================
+    let senderObject = null;
+    if (TypeManager.isDefined(this.sender)) {
+      if (keyToTransform[0] !== "cards") {
+        senderObject = VariableType.splitLogicalList(
+          [this.sender, ...keyToTransform],
+          this.gameData,
+          { returnType: "ref" },
+        );
+      } else {
+        senderObject = this.sender;
+      }
+      if (!TypeManager.isDefined(senderObject)) {
+        senderObject = this.sender;
+      }
+    }
+    const senderObjectSave = structuredClone(senderObject);
+
+    if (!senderObject || !TypeManager.isDefined(senderObject.value)) {
+      const msg =
+        "Cannot execute giveEntireElement: Sender object or its value is undefined.";
+      this.actionLogger.error(msg);
+      if (this.fileLogger) this.fileLogger.error(new Error(msg));
+      return;
+    }
+
+    // 2. DISTRIBUTION EN BOUCLE TANT QUE LE SENDER A DU STOCK ===================
+
+    // CAS A : LES CARTES (TABLEAUX)
+    if (keyToTransform[0] === "cards" && Array.isArray(senderObject.value)) {
+      let newSenderObjectValue = structuredClone(senderObject.value);
+      let playerIndex = 0;
+
+      // Tant qu'il reste des cartes dans le deck/la main du sender
+      while (newSenderObjectValue.length > 0) {
+        // Sélection du joueur courant de manière circulaire
+        const currentRecipient =
+          eligibleData[playerIndex % eligibleData.length];
+
+        // Résolution dynamique du destinataire object pour ce joueur précis
+        let destObj = null;
+        if (TypeManager.isDefined(currentRecipient.destinataire)) {
+          destObj = currentRecipient.destinataire; // C'est "cards", donc le destinataire lui-même
+        }
+
+        if (destObj && Array.isArray(destObj.value)) {
+          const cardToGive = newSenderObjectValue[0]; // On prend la première carte disponible
+
+          if (CardManager.getCard(this.gameData, cardToGive)) {
+            if (this.fileLogger) {
+              this.fileLogger.log(
+                `Give card id ${cardToGive} to player index ${currentRecipient.i}`,
+              );
+            }
+
+            // Sauvegarde pour les tests avant la première modification de ce destinataire
+            if (this.gameData.data.isTest && !currentRecipient.savedDest) {
+              currentRecipient.savedDest = structuredClone(destObj.value);
+            }
+
+            destObj.value.push(cardToGive);
+            newSenderObjectValue.splice(0, 1); // On retire la carte distribuée
+          } else {
+            // Sécurité si l'élément n'est pas valide, on l'enlève pour éviter une boucle infinie
+            newSenderObjectValue.splice(0, 1);
+          }
+        }
+
+        playerIndex++;
+      }
+
+      // Application de la nouvelle valeur au sender
+      senderObject.value = newSenderObjectValue;
+
+      // LOGS DE TEST POUR LES CARTES
+      if (this.gameData.data.isTest) {
+        this.actionEventForTest.diffs.push({
+          key: PlayerManager.isPlayerType(this.sender, this.gameData)
+            ? this.sender.pseudo
+            : this.event.event.from,
+          type: senderObject.type,
+          id: "f456z854e846_entire",
+          before: structuredClone(senderObjectSave.value),
+          after: structuredClone(senderObject.value),
+        });
+
+        // Diffs pour chaque joueur ayant reçu au moins une carte
+        for (const target of eligibleData) {
+          if (target.savedDest) {
+            this.actionEventForTest.diffs.push({
+              key: PlayerManager.isPlayerType(
+                target.destinataire,
+                this.gameData,
+              )
+                ? target.destinataire.pseudo
+                : this.event.event.for,
+              id: "ezfu54528585_entire_loop",
+              type: senderObject.type,
+              before: target.savedDest,
+              after: structuredClone(target.destinataire.value),
+            });
+          }
+        }
+      }
+    }
+
+    // CAS B : LES RESSOURCES NUMÉRIQUES (NOMBRES)
+    else if (typeof senderObject.value === "number") {
+      let playerIndex = 0;
+      let initialSenderValue = senderObject.value;
+
+      // Tant que la ressource du sender est supérieure à 0
+      while (senderObject.value > 0) {
+        const currentRecipient =
+          eligibleData[playerIndex % eligibleData.length];
+
+        // Résolution de la propriété numérique chez le destinataire courant (ex: {player#gain#1})
+        let destObj = VariableType.splitLogicalList(
+          [currentRecipient.destinataire, ...keyToTransform],
+          this.gameData,
+          { returnType: "ref", log: false },
+        );
+
+        if (!TypeManager.isDefined(destObj)) {
+          destObj = currentRecipient.destinataire;
+        }
+
+        if (destObj && typeof destObj.value === "number") {
+          // Sauvegarde pour le test avant modification
+          if (this.gameData.data.isTest && !currentRecipient.savedDest) {
+            currentRecipient.savedDest = structuredClone(destObj.value);
+          }
+
+          destObj.value += 1;
+          senderObject.value -= 1;
+        } else {
+          // Si le destinataire n'est pas valide, on coupe pour éviter une boucle infinie
+          break;
+        }
+
+        playerIndex++;
+      }
+
+      // LOGS DE TEST POUR LES NOMBRES
+      if (this.gameData.data.isTest) {
+        this.actionEventForTest.diffs.push({
+          key: PlayerManager.isPlayerType(this.sender, this.gameData)
+            ? this.sender.pseudo
+            : this.event.event.from,
+          id: "eflokort5123_entire_num",
+          type: "number",
+          before: initialSenderValue,
+          after: senderObject.value,
+        });
+
+        for (const target of eligibleData) {
+          let destObj = VariableType.splitLogicalList(
+            [target.destinataire, ...keyToTransform],
             this.gameData,
             { returnType: "ref", log: false },
           );
-        } else {
-          // si on donne des cartes, 
-          // on ne veut pas accéder à la propriété cards du sender, 
-          // mais au sender lui-même
-            destinataireObject = this.destinataire; 
-        }
+          if (!TypeManager.isDefined(destObj)) destObj = target.destinataire;
 
-        if (!TypeManager.isDefined(destinataireObject)) {
-          destinataireObject = this.destinataire;
-        }
-      }
-      const destinataireObjectSave = structuredClone(destinataireObject);
-
-      // LOG ====================================
-      if (this.fileLogger) {
-        LoggerClass.logGridFromObject(
-          {
-            "Destinataire object": destinataireObject,
-            "Sender Object": senderObject,
-          },
-          "APPLICATION DES CLES ",
-          this.fileLogger,
-        );
-      }
-
-      // START MANIP ==========================================
-
-       
-      // IF WE WANT TO GIVE A SPECIFIC QUANTITY
-      
-        sum = parseInt(sum);
-
-        // IF SUM IS NOT A NUMBER
-      
-
-        // IF THERE IS SENDER
-        if (
-          TypeManager.isDefined(senderObject) &&
-          TypeManager.getType(senderObject.value) === "number"
-        ) {
-          // SUBSTRACT HIS SUM IF HE DONT HAVE ENOUG
-          if (senderObject.value < sum) {
-            if (
-              senderObject.params &&
-              senderObject.params["ifFromStackDoesNotHaveRessource"] &&
-              senderObject.params["ifFromStackDoesNotHaveRessource"].value
-            ) {
-              if (
-                senderObject.params["ifFromStackDoesNotHaveRessource"][
-                  "giveAllRessourcePossible"
-                ]
-              ) {
-                sum = senderObject.value;
-                senderObject.value = 0;
-              }
-              if (
-                senderObject.params["ifFromStackDoesNotHaveRessource"][
-                  "doEvents"
-                ]
-              ) {
-                for (const eventId of senderObject.params[
-                  "ifFromStackDoesNotHaveRessource"
-                ]["doEvents"]) {
-                  Event.actions.jsId(eventId, socket, gameData);
-                }
-              }
-            }
-          } else {
-            // SUBSTRACT REAL SUMIS HE HAS
-            senderObject.value -= sum;
-          }
-          // SAVE ACTION LOG FOR TEST
-          if (this.gameData.data.isTest) {
+          if (target.savedDest !== undefined && destObj) {
             this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.sender, this.gameData)
-                ? this.sender.pseudo
-                : this.event.event.from,
-              type: "number",
-              id: "eflookpmmmort5123",
-              before: structuredClone(senderObjectSave.value),
-              after: structuredClone(senderObject.value),
-            });
-          }
-        }
-        // If WE GIVE FIXE NUMBER OF CARD
-        if (keyToTransform[0] === "cards") {
-          let newSenderObjectValue = structuredClone(senderObject.value);
-          if (this.fileLogger) {
-            LoggerClass.logGridFromObject(
-              {
-                "New Sender Object Value before": newSenderObjectValue,
-                "senderObject value ": senderObject.value,
-              },
-              "COPY ALL CARDS - BEFORE LOOP",
-              this.fileLogger,
-            );
-          }
-          for (let n = 0; n < sum; n++) {
-            // Sender donne des cartes une par une à Destinataire
-            if (!senderObject) {
-              if (this.fileLogger) {
-                this.fileLogger.log("No sender,   ");
-              }
-              continue;
-            }
-            if (senderObject.value.length === 0) {
-              if (this.fileLogger) {
-                this.fileLogger.log("Sender value empty  ");
-              }
-              continue;
-            }
-
-            if (senderObject.value[n]) {
-              if (this.fileLogger) {
-                this.fileLogger.log(
-                  "Give card id  " + senderObject.value[n] + " to destinataire",
-                );
-              }
-
-              destinataireObject?.value?.push(senderObject.value[n]);
-              newSenderObjectValue.splice(n, 1);
-            }
-
-            senderObject.value = newSenderObjectValue;
-          }
-
-          // SAVE ACTION LOG FOR TEST
-          if (this.gameData.data.isTest && senderObject) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.sender, this.gameData)
-                ? this.sender.pseudo
-                : this.event.event.from,
-              type: senderObject.type,
-              message: "Give " + sum + " cards to destinataire",
-              id: "ppkzeort5123",
-              before: structuredClone(senderObjectSave.value),
-              after: structuredClone(newSenderObjectValue),
-            });
-          }
-          if (this.gameData.data.isTest) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
-                ? this.destinataire.pseudo
+              key: PlayerManager.isPlayerType(
+                target.destinataire,
+                this.gameData,
+              )
+                ? target.destinataire.pseudo
                 : this.event.event.for,
-              type: destinataireObject?.type,
-              message: "Receive " + sum + " cards from sender",
-              id: "435545grerg",
-              before: structuredClone(destinataireObjectSave.value),
-              after: structuredClone(destinataireObject.value),
-            });
-          }
-        }
-        //END : If WE GIVE FIXE NUMBER WITHOYUT SENDER
-        else {
-          destinataireObject.value += sum;
-          if (this.gameData.data.isTest) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
-                ? this.destinataire.pseudo
-                : this.event.event.for,
+              id: "e5443655155_entire_num_loop",
               type: "number",
-              id: "e5443655155",
-              before: structuredClone(destinataireObjectSave.value),
-              after: structuredClone(destinataireObject.value),
+              before: target.savedDest,
+              after: destObj.value,
             });
           }
         }
       }
-      // END OF  IF WE WANT TO GIVE A SPECIFIC QUANTITY
+    }
 
-      // SAVER
+    // 3. SAUVEGARDE ET COMMITS VIA PLAYERMANAGER ==============================
+    PlayerManager.updatePlayerObject(
+      this.sender,
+      this.gameData,
+      this.SenderListObject,
+    );
+    for (const target of eligibleData) {
       PlayerManager.updatePlayerObject(
-        this.sender,
+        target.destinataire,
         this.gameData,
-        this.SenderListObject,
+        target.destinataireListObject,
       );
-      PlayerManager.updatePlayerObject(
-        this.destinataire,
-        this.gameData,
-        this.destinataireListObject,
+    }
+
+    // LOGS FINAUX =============================================================
+    if (this.fileLogger) {
+      LoggerClass.logGridFromObject(
+        {
+          "Sender Object Post-Distribution": senderObject,
+          Sender: this.sender,
+        },
+        "SENDER AFTER GIVE ENTIRE ELEMENT ROUND ROBIN",
+        this.fileLogger,
       );
-
-      // logs de resultats
-      if (this.fileLogger) {
-        LoggerClass.logGridFromObject(
-          {
-            "Destinataire Liste": this.destinataireListObject,
-            "Destinataire Object": destinataireObject,
-            Destinataire: this.destinataire,
-          },
-          "DESTINATAIRE AFTER GIVE ELEMENT",
-          this.fileLogger,
-        );
-
-        LoggerClass.logGridFromObject(
-          {
-            "Sender Liste": this.SenderListObject,
-            "Sender Object": senderObject,
-            Sender: this.sender,
-          },
-          "SENDER AFTER GIVE ELEMENT",
-          this.fileLogger,
-        );
-
-        this.fileLogger.log("Data ");
-        this.fileLogger.log(LoggerClass.pretty(this.gameData.data.players));
-
-        if (this.index) {
-          this.fileLogger.log("Resultat des modifications ");
-          for (let player of this.gameData.data.players) {
-            this.fileLogger.log(LoggerClass.pretty(player));
-            this.actionLogger.info("Effectué x" + this.index);
-            this.fileLogger.log(
-              "✅ GiveElementsTo effectué x" + this.index + ".",
-            );
-          }
-        }
-
-        LoggerClass.logGridOldNew(
-          beforeGameData,
-          this.gameData.data,
-          this.fileLogger,
-        );
-
-        this.actionLogger.info("Effectué ");
-        this.fileLogger.log("✅ GiveElementsTo effectué.");
-       // fin logs de resultats
-    
+      LoggerClass.logGridOldNew(
+        beforeGameData,
+        this.gameData.data,
+        this.fileLogger,
+      );
+      this.actionLogger.info(
+        "Effectué giveEntireElement en mode épuisement équitable",
+      );
+      this.fileLogger.log(
+        "✅ giveEntireElement (épuisement de la source) effectué avec succès.",
+      );
+    }
   }
-  giveEntireElement(){
-    const exceptions = ["*"];
-      if (exceptions.includes(sum)) {
-        if (Array.isArray(destinataireObject.value)) {
-          // If no sender
-          if (!senderObject) {
-            const msg =
-              "cannot update gloabal value without type of destinataire. Event id=" +
-              this.event.id;
-            this.actionLogger.error(msg);
-            LoggerClass.logFileLocalisation();
-            if (this.fileLogger) {
-              this.fileLogger.error(
-                new Error(msg),
-                "actions.js → giveElementsTo()",
-              );
-            }
+  giveAnArrayOfElements(keyToTransform, sum) {
+    const key = keyToTransform ? `{${keyToTransform[0]}}` : "";
 
-            errorStack.addError(
-              msg,
-              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
-            );
-            return;
-          }
+    if (this.fileLogger) {
+      LoggerClass.logGridFromObject(
+        { Sender: this.sender, Destinataire: this.destinataire },
+        "AVANT giveAnArrayOfElements ",
+        this.fileLogger,
+      );
+    }
 
-          // if senderObject not array
-          if (!Array.isArray(senderObject.value)) {
-            const msg =
-              "Cannot give all " +
-              key +
-              " to " +
-              this.destinataire +
-              " because sender value is not array got :" +
-              senderObject;
-            if (this.fileLogger) {
-              this.fileLogger.log(LoggerClass.pretty(senderObject));
+    let beforeGameData = structuredClone(this.gameData.data);
 
-              this.fileLogger.error(
-                new Error(msg),
-                "actions.js → giveElementsTo()",
-              );
-            }
-            this.actionLogger.error(msg);
-            LoggerClass.logFileLocalisation();
-            errorStack.addError(
-              msg,
-              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
-            );
-            return;
-          }
-
-          // WHEN ALL CARDS ARE GIVEN
-          if (key === "{cards}") {
-            // COPY CARDS OF SENDER
-            let newSenderObjectValue = structuredClone(senderObject.value);
-            if (this.fileLogger) {
-              LoggerClass.logGridFromObject(
-                {
-                  "New Sender Object Value before": newSenderObjectValue,
-                  "senderObject value ": senderObject.value,
-                },
-                "COPY ALL CARDS - BEFORE LOOP",
-                this.fileLogger,
-              );
-            }
-            // GIVE ALL CARD
-            for (let elt of senderObject.value) {
-              if (senderObject.value.length === 0 && this.fileLogger) {
-                this.fileLogger.log("Sender value empty  ");
-                continue;
-              }
-              // Verify That card exist in gameData
-              if (CardManager.getCard(this.gameData, elt)) {
-                if (this.fileLogger) {
-                  this.fileLogger.log(
-                    "Give card id  " + elt + " to destinataire",
-                  );
-                }
-                destinataireObject.value.push(elt);
-                const index = newSenderObjectValue.indexOf(elt);
-                if (index !== -1) {
-                  newSenderObjectValue.splice(index, 1);
-                } else {
-                  if (this.fileLogger) {
-                    this.fileLogger.log(
-                      "Card id " + elt + " not found in newSenderObjectValue ",
-                    );
-                  }
-                }
-              } else {
-                if (this.logs.giveElementsLog && this.fileLogger) {
-                  this.fileLogger.error(
-                    "l'element n'est pas une carte got : " + elt,
-                  );
-                }
-              }
-            }
-            // SAVE ACTION LOG FOR TEST
-            if (this.gameData.data.isTest) {
-              this.actionEventForTest.diffs.push({
-                key: PlayerManager.isPlayerType(this.sender, this.gameData)
-                  ? this.sender.pseudo
-                  : this.event.event.from,
-                type: senderObject.type,
-                id: "f456z854e846",
-                before: structuredClone(senderObject.value),
-                after: structuredClone(newSenderObjectValue),
-              });
-            }
-            if (this.gameData.data.isTest) {
-              this.actionEventForTest.diffs.push({
-                key: PlayerManager.isPlayerType(
-                  this.destinataire,
-                  this.gameData,
-                )
-                  ? this.destinataire.pseudo
-                  : this.event.event.for,
-                id: "ezfu54528585",
-                type: senderObject.type,
-                before: structuredClone(destinataireObjectSave.value),
-                after: structuredClone(destinataireObject.value),
-              });
-            }
-            senderObject.value = newSenderObjectValue;
-          }
-        }
-
-        // want to give all but it's value
-        if (typeof destinataireObject.value == "number") {
-          // if no sender
-          if (!this.sender) {
-            // get total available in global value
-            let totalAvailable = VariableType.splitLogicalList(
-              keyToTransform,
-              this.gameData,
-              null,
-            );
-            if (this.logs.giveElementsLog && this.fileLogger) {
-              this.fileLogger.log("give to destinataire object all available ");
-              this.fileLogger.log("totalAvailable: ", totalAvailable);
-              this.fileLogger.log(
-                "search ressource :" + keyToTransform.toString(),
-              );
-              this.fileLogger.log(this.destinataire);
-
-              this.fileLogger.log(LoggerClass.pretty(destinataireObject));
-            }
-          }
-          // if p1 want to give all his gain to p2
-          if (senderObject && senderObject.value !== null) {
-            sum = senderObject.value;
-
-            // SAVE ACTION LOG FOR TEST
-            if (this.gameData.data.isTest) {
-              this.actionEventForTest.diffs.push({
-                key: this.sender.pseudo,
-                id: "eflokort5123",
-                type: "number",
-                before: structuredClone(senderObject.value),
-                after: 0,
-              });
-            }
-          }
-        }
+    // INITIALIZATION SENDER =======================
+    let senderObject = null;
+    if (TypeManager.isDefined(this.sender)) {
+      if (keyToTransform[0] !== "cards") {
+        senderObject = VariableType.splitLogicalList(
+          [this.sender, ...keyToTransform],
+          this.gameData,
+          { returnType: "ref" },
+        );
+      } else {
+        senderObject = this.sender;
       }
-  }
-  giveAnArrayOfElements() {
+      if (!TypeManager.isDefined(senderObject)) {
+        senderObject = this.sender;
+      }
+    }
+    const senderObjectSave = structuredClone(senderObject);
+
+    // INITIALIZE DESTINATAIRE =================================
+    let destinataireObject = null;
+    if (TypeManager.isDefined(this.destinataire)) {
+      if (keyToTransform[0] !== "cards") {
+        destinataireObject = VariableType.splitLogicalList(
+          [this.destinataire, ...keyToTransform],
+          this.gameData,
+          { returnType: "ref", log: false },
+        );
+      } else {
+        destinataireObject = this.destinataire;
+      }
+      if (!TypeManager.isDefined(destinataireObject)) {
+        destinataireObject = this.destinataire;
+      }
+    }
+    const destinataireObjectSave = structuredClone(destinataireObject);
+
+    // LOGS APRES APPLICATION DES CLES =========================
+    if (this.fileLogger) {
+      LoggerClass.logGridFromObject(
+        {
+          "Destinataire object": destinataireObject,
+          "Sender Object": senderObject,
+        },
+        "APPLICATION DES CLES (giveAnArrayOfElements)",
+        this.fileLogger,
+      );
+    }
+
+    // MANIPULATION DES DONNEES ================================
     if (Array.isArray(sum)) {
-        // Debut des logs de fin d'action
+      if (this.fileLogger) {
+        this.fileLogger.log("Sum : " + JSON.stringify(sum));
+      }
+
+      // Type checks validations
+      if (
+        TypeManager.isDefined(senderObject) &&
+        TypeManager.getType(senderObject.value) !== "array"
+      ) {
+        const msg =
+          "Try to give elements but senderObject value is not an array. Got type: " +
+          typeof sum +
+          " with value: " +
+          JSON.stringify(sum) +
+          " Error in key " +
+          key;
+        this.actionLogger.error(msg);
+        LoggerClass.logFileLocalisation();
         if (this.fileLogger) {
-          this.fileLogger.log("Sum : " + JSON.stringify(sum));
-        }
-
-        // if sender but sender value is not array
-        if (
-          TypeManager.isDefined(senderObject) &&
-          TypeManager.getType(senderObject.value) !== "array"
-        ) {
-          const msg =
-            "Try to give elements but senderObject value is not an array. Got type: " +
-            typeof sum +
-            " with value: " +
-            JSON.stringify(sum) +
-            "Error in key " +
-            key;
-          this.actionLogger.error(msg);
-          LoggerClass.logFileLocalisation();
-          if (this.fileLogger) {
-            this.fileLogger.error(
-              new Error(msg),
-              "actions.js → giveElementsTo()",
-            );
-          }
-          errorStack.addError(
-            msg,
-            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+          this.fileLogger.error(
+            new Error(msg),
+            "actions.js → giveAnArrayOfElements()",
           );
-          return;
         }
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
+        return;
+      }
 
-        // if destinataire  but destinataire value is not array
-        if (
-          TypeManager.isDefined(destinataireObject) &&
-          TypeManager.getType(destinataireObject.value) !== "array"
-        ) {
-          const msg =
-            "Try to give elements but destinataireObject value is not an array. Got type: " +
-            typeof sum +
-            " with value: " +
-            JSON.stringify(sum) +
-            "Error in key " +
-            key;
-          this.actionLogger.error(msg);
-          LoggerClass.logFileLocalisation();
-          if (this.fileLogger) {
-            this.fileLogger.error(
-              new Error(msg),
-              "actions.js → giveElementsTo()",
-            );
-          }
-          errorStack.addError(
-            msg,
-            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      if (
+        TypeManager.isDefined(destinataireObject) &&
+        TypeManager.getType(destinataireObject.value) !== "array"
+      ) {
+        const msg =
+          "Try to give elements but destinataireObject value is not an array. Got type: " +
+          typeof sum +
+          " with value: " +
+          JSON.stringify(sum) +
+          " Error in key " +
+          key;
+        this.actionLogger.error(msg);
+        LoggerClass.logFileLocalisation();
+        if (this.fileLogger) {
+          this.fileLogger.error(
+            new Error(msg),
+            "actions.js → giveAnArrayOfElements()",
           );
-          return;
         }
+        errorStack.addError(
+          msg,
+          LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+        );
+        return;
+      }
 
-        // IF THERE IS SENDER, remove to sender
-        if (
-          TypeManager.isDefined(senderObject) &&
-          TypeManager.getType(senderObject.value) === "array"
-        ) {
-          // throw away only element that sender have in his value
-          // works with card because with store only card id
-          senderObject.value = senderObject.value.filter(
-            (elt) => !sum.includes(elt) || !sum.includes(String(elt)),
-          );
+      // IF THERE IS SENDER, remove elements from sender
+      if (
+        TypeManager.isDefined(senderObject) &&
+        TypeManager.getType(senderObject.value) === "array"
+      ) {
+        senderObject.value = senderObject.value.filter(
+          (elt) => !sum.includes(elt) || !sum.includes(String(elt)),
+        );
 
-          // SAVE ACTION LOG FOR TEST
-          if (this.gameData.data.isTest) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.sender, this.gameData)
-                ? this.sender.pseudo
-                : this.event.event.from,
-              type: senderObjectSave.type,
-              id: "givea6566rrayraayr5454",
-              diff: ObjectManager.getObjectDiff(
-                structuredClone(senderObjectSave.value),
-                structuredClone(senderObject.value),
-              ),
-              before: structuredClone(senderObjectSave.value),
-              after: structuredClone(senderObject.value),
-            });
-          }
-        } // IF THERE IS SENDER, remove to sender
-        if (
-          TypeManager.isDefined(destinataireObject) &&
-          TypeManager.getType(destinataireObject.value) === "array"
-        ) {
-          // throw away only element that sender have in his value
-          destinataireObject.value = destinataireObject.value.concat(sum);
-
-          // SAVE ACTION LOG FOR TEST
-          if (this.gameData.data.isTest) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(this.sender, this.gameData)
-                ? this.sender.pseudo
-                : this.event.event.from,
-              type: "array",
-              diff: ObjectManager.getObjectDiff(
-                structuredClone(destinataireObjectSave.value),
-                structuredClone(destinataireObject.value),
-              ),
-              id: "receivearr465ayraayr5454",
-              before: structuredClone(destinataireObjectSave.value),
-              after: structuredClone(destinataireObject.value),
-            });
-          }
+        // SAVE ACTION LOG FOR TEST
+        if (this.gameData.data.isTest) {
+          this.actionEventForTest.diffs.push({
+            key: PlayerManager.isPlayerType(this.sender, this.gameData)
+              ? this.sender.pseudo
+              : this.event.event.from,
+            type: senderObjectSave.type,
+            id: "givea6566rrayraayr5454",
+            diff: ObjectManager.getObjectDiff(
+              structuredClone(senderObjectSave.value),
+              structuredClone(senderObject.value),
+            ),
+            before: structuredClone(senderObjectSave.value),
+            after: structuredClone(senderObject.value),
+          });
         }
       }
+
+      // ADD elements to destinataire
+      if (
+        TypeManager.isDefined(destinataireObject) &&
+        TypeManager.getType(destinataireObject.value) === "array"
+      ) {
+        destinataireObject.value = destinataireObject.value.concat(sum);
+
+        // SAVE ACTION LOG FOR TEST
+        if (this.gameData.data.isTest) {
+          this.actionEventForTest.diffs.push({
+            key: PlayerManager.isPlayerType(this.destinataire, this.gameData)
+              ? this.destinataire.pseudo
+              : this.event.event.for,
+            type: "array",
+            diff: ObjectManager.getObjectDiff(
+              structuredClone(destinataireObjectSave.value),
+              structuredClone(destinataireObject.value),
+            ),
+            id: "receivearr465ayraayr5454",
+            before: structuredClone(destinataireObjectSave.value),
+            after: structuredClone(destinataireObject.value),
+          });
+        }
+      }
+    }
+
+    // SAVER & UPDATES =========================================
+    PlayerManager.updatePlayerObject(
+      this.sender,
+      this.gameData,
+      this.SenderListObject,
+    );
+    PlayerManager.updatePlayerObject(
+      this.destinataire,
+      this.gameData,
+      this.destinataireListObject,
+    );
+
+    // LOGS DE RESULTATS FINAUX ================================
+    if (this.fileLogger) {
+      LoggerClass.logGridFromObject(
+        {
+          "Destinataire Liste": this.destinataireListObject,
+          "Destinataire Object": destinataireObject,
+          Destinataire: this.destinataire,
+        },
+        "DESTINATAIRE AFTER GIVE ARRAY OF ELEMENTS",
+        this.fileLogger,
+      );
+      LoggerClass.logGridFromObject(
+        {
+          "Sender Liste": this.SenderListObject,
+          "Sender Object": senderObject,
+          Sender: this.sender,
+        },
+        "SENDER AFTER GIVE ARRAY OF ELEMENTS",
+        this.fileLogger,
+      );
+      LoggerClass.logGridOldNew(
+        beforeGameData,
+        this.gameData.data,
+        this.fileLogger,
+      );
+      this.actionLogger.info("Effectué giveAnArrayOfElements");
+      this.fileLogger.log("✅ giveAnArrayOfElements effectué.");
+    }
   }
 }
