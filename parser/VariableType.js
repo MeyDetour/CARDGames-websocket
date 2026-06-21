@@ -24,7 +24,7 @@ export default class VariableType extends TypeInterface {
     if (!params) {
       params = {};
     }
-       // stop propagation because with call parsing and we dont want to have
+    // stop propagation because with call parsing and we dont want to have
     // just topDiscardCard form str "{topDiscardCard#color}" but we want
     // to have all the string to be able to parse it in the right order
     // if we dont reset, params.conditionDetailsForTest will be transfered
@@ -32,7 +32,7 @@ export default class VariableType extends TypeInterface {
     // we copy local params because if we remove directly params.conditionDetailsForTest
     // this will be applied for splitLogical
     const localParams = { ...params };
-  localParams.conditionDetailsForTest = null;
+    localParams.conditionDetailsForTest = null;
     if (params && params.fileLogger) {
       params.fileLogger.log(
         Parser.getDepthIndentation(params.depth) +
@@ -53,8 +53,6 @@ export default class VariableType extends TypeInterface {
     if (!params) {
       params = {};
     }
- 
-
 
     if (!TypeManager.isDefined(str)) {
       variableLogger.error(
@@ -206,6 +204,23 @@ export default class VariableType extends TypeInterface {
             return null;
           }
           value = PlayerManager.getPlayerWithId(gameData, params.currentPlayer);
+        } else if (elt === "selectedPlayer") {
+          if (params.selectedPlayer == null) {
+            const msg = `Missing params.selectedPlayer for access to 'selectedPlayer' in VariableType.splitLogicalList (element=${elt})`;
+            variableLogger.error(msg);
+            LoggerClass.logFileLocalisation();
+            try {
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
+            } catch (e) {}
+            return null;
+          }
+          value = PlayerManager.getPlayerWithId(
+            gameData,
+            params.selectedPlayer,
+          );
         } else if (elt === "player") {
           if (params.player == null) {
             const msg = `Missing params.player for access to 'player' in VariableType.splitLogicalList (element=${elt})`;

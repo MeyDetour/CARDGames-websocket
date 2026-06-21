@@ -6,10 +6,12 @@ import CardManager from "../services/CardManager.js";
 import { TypeManager } from "../services/helper/TypeManager.js";
 import { ArrayManager } from "../services/helper/ArrayManager.js";
 import VariableType from "../../parser/VariableType.js";
-import { ObjectManager } from "../services/helper/ObjectManager.js";
+import { ObjectManager } from "../services/helper/ObjectManager.js"; 
 export default class Action {
   /**
    * Execute logical separation for access variable  ex currentPlayer#gain#1
+   * @param  {Object} event   The event object
+   * @param  {string} boucle  The name of the loop if the action is in a loop
    * @param  {Object} sender  The player or card stack wich give element
    * @param  {Object} senderListObject The list of player or card stack wich give element
    * @param  {Object} destinataire The player or card stack
@@ -23,14 +25,15 @@ export default class Action {
   constructor(
     fileLogger,
     event = null,
+    boucle = null,
     sender = null,
     senderListObject = null,
-    destinataire,
-    destinataireListObject,
-    giveElements,
-    value,
-    socket,
-    gameData,
+    destinataire = null,
+    destinataireListObject = null,
+    giveElements = null,
+    value = null,
+    socket = null,
+    gameData = null,
     logs = {},
     params = {},
     testType = "event",
@@ -39,15 +42,19 @@ export default class Action {
   ) {
     this.fileLogger = fileLogger;
     this.event = event;
+    this.boucle = boucle
+      ? Parser.translateInnerExpression(boucle, gameData, { ...params })
+      : null;
     this.sender = sender;
     this.senderListObject = senderListObject;
     this.destinataire = destinataire;
     this.destinataireListObject = destinataireListObject;
-    this.giveElements = giveElements;
+    this.giveElementsData = giveElements;
     this.value = value;
     this.socket = socket;
     this.gameData = gameData;
     this.logs = logs;
+    this.boucleDataArray = null;
     this.params = params;
     this.index = index;
 
@@ -104,7 +111,14 @@ export default class Action {
    * @param {Array} SenderListObject
    */
   setSenderListObject(SenderListObject) {
-    this.SenderListObject = SenderListObject;
+    this.senderListObject = SenderListObject;
+  }
+  /**
+   * Définit la liste d'objets envoyeurs (utilisé pour 'for' loops)
+   * @param {Array} boucleDataArray
+   */
+  setBoucleDataArray(boucleDataArray) {
+    this.boucleDataArray = boucleDataArray;
   }
   /**
    * Définit l'index courant d'itération (si dans une boucle)
@@ -124,7 +138,7 @@ export default class Action {
       senderListObject: this.senderListObject ? "object" : null,
       destinataire: this.destinataire ? "object" : null,
       destinataireListObject: this.destinataireListObject ? "object" : null,
-      giveElements: this.giveElements,
+      giveElements: this.giveElementsData,
       value: this.value,
       params: this.params ? LoggerClass.getKeyOfObject(this.params) : null,
       index: this.index,
@@ -483,7 +497,294 @@ export default class Action {
       }
     }
   }
+  giveElements() {
+    // Si pas de boucle, déléguer à giveElementsTo classique
+    if (
+      !this.boucleDataArray ||
+      !Array.isArray(this.boucleDataArray) ||
+      this.boucleDataArray.length === 0
+    ) {
+      this.giveElementsTo();
+      return;
+    }
 
+    const eligibleData = [];
+    for (let i = 0; i < this.boucleDataArray.length; i++) {
+      if (this.fileLogger) {
+        this.fileLogger.log(
+          `\n🔄 Évaluation de l'itération ${i} pour giveElements`,
+        );
+      }
+      let [destinataireListObject, destinataire] = PlayerManager.getDestinataireElement(
+        this.event,
+        this.gameData,
+        i,
+        this.params,
+      );
+      let [senderListObject, sender] = PlayerManager.getSenderElement(
+        this.event,
+        this.gameData,
+        i,
+        this.params,
+      );
+
+      this.setDestinataireListObject(destinataireListObject);
+      this.setDestinataire(destinataire);
+      this.setSenderListObject(senderListObject);
+      this.setSender(sender);
+      this.setIndex(i);
+
+      const condition = Parser.translateInnerExpression(
+        this.boucleCondition,
+        this.gameData,
+        this.params,
+      );
+
+      if (condition == false && TypeManager.isDefined(this.boucleCondition)) {
+        if (this.fileLogger) {
+          this.fileLogger.log(`Condition false at index ${i}, skipping`);
+          this.fileLogger.log(LoggerClass.pretty(destinataire));
+        }
+        continue;
+      }
+      if (this.fileLogger) {
+        this.fileLogger.log(
+          `Condition true at index ${i}, adding to eligibleData`,
+        );
+      }
+      eligibleData.push({
+        i,
+        destinataireListObject,
+        destinataire,
+        senderListObject,
+        sender,
+      }); if (this.fileLogger) {
+      this.fileLogger.log(
+        `Condition true at index ${i}, adding to eligibleData`,
+      );
+    }
+
+    }
+   
+    if (eligibleData.length === 0) {
+      if (this.fileLogger)
+        this.fileLogger.log("No eligible recipients after filtering");
+      return;
+    }
+
+    // 2. PARCOURIR chaque clé à distribuer
+    for (let key of Object.keys(this.giveElementsData)) {
+      // Calculer la quantité à distribuer (sur le premier destinataire éligible pour l'évaluation)
+      const first = eligibleData[0];
+      this.setDestinataireListObject(first.destinataireListObject);
+      this.setDestinataire(first.destinataire);
+      this.setSenderListObject(first.senderListObject);
+      this.setSender(first.sender);
+      this.setIndex(first.i);
+
+      let sum = Parser.translateInnerExpression(
+        this.giveElementsData[key],
+        this.gameData,
+        { ...this.params, location: this.fileLogger },
+      );
+
+      if (this.fileLogger) {
+        this.fileLogger.log("sum computed:");
+        this.fileLogger.log(LoggerClass.pretty(sum));
+      }
+
+      const isGiveAll = sum === "*";
+      const isArray = Array.isArray(sum);
+      const isNumber = !isGiveAll && !isArray && !isNaN(parseInt(sum));
+      const sumInt = isNumber ? parseInt(sum) : null;
+
+      if (key === "{cards}") {
+        // === DISTRIBUTION ROUND-ROBIN DE CARTES ===
+
+        if (isGiveAll) {
+          // "*" : distribuer TOUTES les cartes du sender en round-robin
+          // On a besoin du sender global (deck), pas par joueur
+          // Le sender est le même pour tous (ex: {deck}), on le récupère depuis le premier
+          const [senderListObject, senderSource] = PlayerManager.getSenderElement(
+            this.event,
+            this.gameData,
+            null,
+            this.params,
+          );
+          let senderObject = VariableType.splitLogicalList(
+            [senderSource],
+            this.gameData,
+            { returnType: "ref" },
+          );
+
+          if (!senderObject || !Array.isArray(senderObject.value)) {
+            const msg =
+              "giveElements: sender n'a pas de tableau de cartes pour '*'";
+            this.actionLogger.error(msg);
+            errorStack.addError(
+              msg,
+              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+            );
+            return;
+          }
+
+          // Construire les objets destinataires pour chaque joueur éligible
+          const destinataireObjects = eligibleData.map(({ destinataire }) => {
+            let obj = VariableType.splitLogicalList(
+              [destinataire],
+              this.gameData,
+              { returnType: "ref", log: false },
+            );
+            return obj;
+          });
+
+          // Round-robin : distribuer toutes les cartes une par une
+          let cardIndex = 0;
+          const totalCards = senderObject.value.length;
+          const newSenderValue = structuredClone(senderObject.value);
+
+          while (newSenderValue.length > 0) {
+            const recipientIndex = cardIndex % eligibleData.length;
+            const card = newSenderValue.shift(); // prendre la première carte
+
+            if (!CardManager.getCard(this.gameData, card)) {
+              if (this.fileLogger)
+                this.fileLogger.log(`Card ${card} not found, skipping`);
+              cardIndex++;
+              continue;
+            }
+
+            destinataireObjects[recipientIndex]?.value?.push(card);
+
+            if (this.fileLogger) {
+              this.fileLogger.log(
+                `Round-robin: carte ${card} → joueur index ${recipientIndex}`,
+              );
+            }
+            cardIndex++;
+          }
+
+          // Vider le sender
+          senderObject.value = [];
+
+          // Sauvegarder les joueurs
+          for (const { destinataire, destinataireListObject } of eligibleData) {
+            PlayerManager.updatePlayerObject(
+              null,
+              this.gameData,
+              destinataireListObject,
+            );
+            // (le sender global sera mis à jour après)
+          }
+          // Mettre à jour le sender (deck)
+          PlayerManager.updatePlayerObject(
+            senderSource,
+            this.gameData,
+            senderListObject,
+          );
+        } else if (isNumber) {
+          // Nombre fixe de cartes : distribuer sumInt fois en round-robin
+          // Même logique : le sender est global (le deck)
+          const [senderListObject, senderSource] = Event.getSenderElement(
+            this.event,
+            this.gameData,
+            null,
+            this.params,
+          );
+          let senderObject = VariableType.splitLogicalList(
+            [senderSource],
+            this.gameData,
+            { returnType: "ref" },
+          );
+
+          if (!senderObject || !Array.isArray(senderObject.value)) {
+            const msg = "giveElements: sender n'a pas de tableau de cartes";
+            this.actionLogger.error(msg);
+            errorStack.addError(
+              msg,
+              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+            );
+            return;
+          }
+
+          const destinataireObjects = eligibleData.map(({ destinataire }) =>
+            VariableType.splitLogicalList([destinataire], this.gameData, {
+              returnType: "ref",
+              log: false,
+            }),
+          );
+
+          // sumInt tours de distribution round-robin
+          const totalToDistribute = sumInt * eligibleData.length;
+          const newSenderValue = structuredClone(senderObject.value);
+
+          for (let turn = 0; turn < sumInt; turn++) {
+            for (let r = 0; r < eligibleData.length; r++) {
+              if (newSenderValue.length === 0) {
+                if (this.fileLogger)
+                  this.fileLogger.log("Deck vide, arrêt de la distribution");
+                break;
+              }
+              const card = newSenderValue.shift();
+              if (!CardManager.getCard(this.gameData, card)) {
+                if (this.fileLogger)
+                  this.fileLogger.log(`Card ${card} not found, skipping`);
+                r--; // réessayer avec la prochaine carte pour ce joueur
+                continue;
+              }
+              destinataireObjects[r]?.value?.push(card);
+              if (this.fileLogger) {
+                this.fileLogger.log(
+                  `Tour ${turn + 1}: carte ${card} → joueur index ${r}`,
+                );
+              }
+            }
+          }
+
+          senderObject.value = newSenderValue;
+
+          // Sauvegarder
+          for (const { destinataireListObject } of eligibleData) {
+            PlayerManager.updatePlayerObject(
+              null,
+              this.gameData,
+              destinataireListObject,
+            );
+          }
+          PlayerManager.updatePlayerObject(
+            senderSource,
+            this.gameData,
+            senderListObject,
+          );
+        }
+      } else {
+        // === DISTRIBUTION D'UNE VALEUR NUMÉRIQUE (gain, ressource...) ===
+        // Ici pas de round-robin, on applique à chaque joueur indépendamment
+        for (const {
+          i,
+          destinataireListObject,
+          destinataire,
+          senderListObject,
+          sender,
+        } of eligibleData) {
+          this.setDestinataireListObject(destinataireListObject);
+          this.setDestinataire(destinataire);
+          this.setSenderListObject(senderListObject);
+          this.setSender(sender);
+          this.setIndex(i);
+
+          // Recalculer sum pour chaque joueur (au cas où l'expression dépend du joueur courant)
+          let sumPerPlayer = Parser.translateInnerExpression(
+            this.giveElementsData[key],
+            this.gameData,
+            { ...this.params, location: this.fileLogger },
+          );
+
+          this.giveElementsTo();
+        }
+      }
+    }
+  }
   giveElementsTo() {
     if (this.fileLogger) {
       this.fileLogger.log(
@@ -496,7 +797,7 @@ export default class Action {
           "Sender List Object": typeof this.senderListObject,
           Destinataire: typeof this.destinataire,
           "Destinataire List Object": typeof this.destinataireListObject,
-          "Give Elements": typeof this.giveElements,
+          "Give Elements": typeof this.giveElementsData,
           Socket: typeof this.socket,
           "Game Data": typeof this.gameData,
           Params: typeof this.params,
@@ -518,9 +819,9 @@ export default class Action {
     }
 
     let beforeGameData = structuredClone(this.gameData.data);
-     
+
     // PARCOURIR TOUS LES ELEMENTS A DONNER
-    for (let key of Object.keys(this.giveElements)) {
+    for (let key of Object.keys(this.giveElementsData)) {
       //transform element to give like {gain#1} to array like ["gain","1"]
       // get array like ["gain","1"]
       let keyToTransform = VariableType.getListSplited(
@@ -597,7 +898,7 @@ export default class Action {
 
       //  GET QUANTITY TO GIVE
       let sum = Parser.translateInnerExpression(
-        this.giveElements[key],
+        this.giveElementsData[key],
         this.gameData,
         {
           ...this.params,

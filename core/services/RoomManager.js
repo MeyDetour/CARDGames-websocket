@@ -139,6 +139,7 @@ class RoomManager {
           type: "cardList",
           value: [],
         },
+        errors : [],
         allPlayersHasPlayed: {
           type: "boolean",
           value: false,

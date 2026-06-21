@@ -1,6 +1,8 @@
 import { Logger, LoggerClass } from "../logger/logger.js";
 import { TypeManager } from "./helper/TypeManager.js";
 import { errorStack } from "../error/ErrorStack.js";
+import Parser from "../../parser/parser.js";
+import  VariableType  from "../../parser/VariableType.js";
 const playerManagerLogger = Logger("PlayerManager");
 export default class PlayerManager {
   //playerPosition 1 - x
@@ -499,4 +501,120 @@ export default class PlayerManager {
     PlayerManager.reORderPlayerPosition(gameData);
     return newPlayer;
   }
+
+    /**
+     * Résout la cible (destinataire) d'un event en évaluant la clause `for`.
+     * Supporte la valeur spéciale `playerBoucle` lorsqu'on est dans une boucle.
+     * @param {Object} event
+     * @param {Object} gameData
+     * @param {number|null} indexInLoop - index de l'itération lorsqu'utilisé en boucle
+     * @param {Object} [params={}] - paramètres passés aux expressions
+     * @returns {[Array|null, Object|null]} retourne [list, destinataireRef]
+     */
+    static getDestinataireElement(event, gameData, indexInLoop, params = {}) {
+      if (event["event"]["for"]) {
+        if (event.event.for.includes("playerBoucle")) {
+          let list = VariableType.getListSplited(
+            event["event"]["for"],
+            gameData,
+            null,
+          );
+  
+          // dans le cas d'une boucle
+          let playerBoucleIndex = list.indexOf("playerBoucle");
+          if (playerBoucleIndex > -1) {
+            if (indexInLoop !== null) {
+              let player = PlayerManager.getPlayer(gameData, indexInLoop + 1);
+              params["playerBoucle"] = player;
+              list.splice(playerBoucleIndex, 1, player);
+            } else {
+              const msg = `Event ${event.id} Want to check 'playerBoucle' but does not provide any index number in iteration`;
+              eventLogger.error(msg);
+              LoggerClass.logFileLocalisation();
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
+              return [null, null];
+            }
+          }
+          return [
+            list,
+            VariableType.splitLogicalList(list, gameData, {
+              returnType: "ref",
+              ...params,
+            }),
+          ];
+        }
+        return [
+          null,
+          Parser.translateInnerExpression(event["event"]["for"], gameData, {
+            returnType: "ref",
+            ...params,
+          }),
+        ];
+      }
+      return [null, null];
+    }
+  
+    /**
+     * Résout l'élément sender (champ `from`) pour un event.
+     * @param {Object} event
+     * @param {Object} gameData
+     * @param {Object} [params]
+     * @returns {*} référence vers l'élément sender (ou undefined)
+     */
+  
+    static getSenderElement(event, gameData, indexInLoop, params = {}) {
+      if (params && params.log) {
+        eventLogger.debug("event :>> " + typeof event);
+        eventLogger.debug("gameData :>> " + typeof gameData);
+        eventLogger.debug("indexInLoop :>> " + indexInLoop);
+        eventLogger.debug("params :>> " + typeof params);
+      }
+      if (event["event"]["from"]) {
+        if (event.event.from.includes("playerBoucle")) {
+          console.log("playerBoucle :>> ");
+          let list = VariableType.getListSplited(
+            event["event"]["from"],
+            gameData,
+            params,
+          );
+  
+          // dans le cas d'une boucle
+          let playerBoucleIndex = list.indexOf("playerBoucle");
+          if (playerBoucleIndex > -1) {
+            if (indexInLoop !== null) {
+              let player = PlayerManager.getPlayer(gameData, indexInLoop + 1);
+              params["playerBoucle"] = player;
+              list.splice(playerBoucleIndex, 1, player);
+            } else {
+              const msg = `Event ${event.id} Want to check 'playerBoucle' but does not provide any index number in iteration`;
+              eventLogger.error(msg);
+              LoggerClass.logFileLocalisation();
+              errorStack.addError(
+                msg,
+                LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+              );
+              return [null, null]; // Retourne null si l'index n'est pas fourni
+            }
+          }
+          return [
+            list,
+            VariableType.splitLogicalList(list, gameData, {
+              returnType: "ref",
+              ...params,
+            }),
+          ];
+        }
+        return [
+          null,
+          Parser.translateInnerExpression(event["event"]["from"], gameData, {
+            returnType: "ref",
+            ...params,
+          }),
+        ];
+      }
+      return [null, null];
+    }
 }

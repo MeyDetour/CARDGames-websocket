@@ -9,7 +9,7 @@ import { TypeManager } from "../services/helper/TypeManager.js";
 import Action from "./Action.js";
 import { errorStack } from "../error/ErrorStack.js";
 import GameManager from "../services/GameManager.js";
-import EventFileLogger from "../logger/EventFileLogger.js";
+import EventFileLogger from "../logger/EventFileLogger.js"; 
 import { ObjectManager } from "../services/helper/ObjectManager.js";
 
 const eventLogger = Logger("Event");
@@ -173,6 +173,7 @@ export default class Event {
     const actionObject = new Action(
       fileLogger,
       event,
+      event.boucle,
       null,
       null,
       null,
@@ -196,6 +197,7 @@ export default class Event {
       conditionDetailsForTest,
       null,
     );
+    actionObject.setBoucleCondition(event.event.condition);
     if (event["boucle"]) {
       let elts = Parser.translateInnerExpression(event["boucle"], gameData, {
         params,
@@ -205,7 +207,27 @@ export default class Event {
       if (globalEventDetailLog && fileLogger) {
         fileLogger.section(" Il y a  " + elts.length + " elements");
       }
-      if (Array.isArray(elts)) {
+      if (!Array.isArray(elts)){
+         new AppError(
+          socket,
+          "Cannot obtain array with value " +
+            event["boucle"] +
+            "with event ID=" +
+            event["id"],
+        );
+        eventLogger.warn(
+          "Cannot obtain array with value " +
+            event["boucle"] +
+            "with event ID=" +
+            event["id"],
+        );
+        return null;
+      }
+      actionObject.setBoucleDataArray(elts);
+      // dont execute give element because we want to 
+      // give element one per one in another boucle, if we give 5 cards
+      // to each player we want to give, to player1, player2 ,player3, player1
+      if (Array.isArray(elts) && !giveElements) {
         for (let i = 0; i < elts.length; i++) {
           if (fileLogger) {
             fileLogger.log("I In boucle :>> ", i);
@@ -213,7 +235,7 @@ export default class Event {
 
           let destinataireListObject, destinataire;
           let senderListObject, sender;
-          [destinataireListObject, destinataire] = this.getDestinataireElement(
+          [destinataireListObject, destinataire] = PlayerManager.getDestinataireElement(
             event,
             gameData,
             i,
@@ -238,7 +260,7 @@ export default class Event {
           if (PlayerManager.isPlayerType(destinataire, gameData)) {
             destinataire = structuredClone(destinataire);
           }
-          [senderListObject, sender] = this.getSenderElement(
+          [senderListObject, sender] = PlayerManager.getSenderElement(
             event,
             gameData,
             i,
@@ -290,39 +312,26 @@ export default class Event {
             }
           }
 
-          //  ELEMENT TO GIVE
-          if (giveElements !== null && destinataire != null) {
-            actionObject.giveElementsTo();
-          }
+         
         }
-      } else {
-        new AppError(
-          socket,
-          "Cannot obtain array with value " +
-            event["boucle"] +
-            "with event ID=" +
-            event["id"],
-        );
-        eventLogger.warn(
-          "Cannot obtain array with value " +
-            event["boucle"] +
-            "with event ID=" +
-            event["id"],
-        );
-        return null;
+
       }
+      if (Array.isArray(elts) && giveElements) {
+          actionObject.giveElements();
+      }
+     
     }
     if (!event["boucle"]) {
       let destinataireListObject, destinataire;
       let senderListObject, sender;
 
-      [destinataireListObject, destinataire] = this.getDestinataireElement(
+      [destinataireListObject, destinataire] = PlayerManager.getDestinataireElement(
         event,
         gameData,
         null,
         params,
       );
-      [senderListObject, sender] = this.getSenderElement(
+      [senderListObject, sender] = PlayerManager.getSenderElement(
         event,
         gameData,
         null,
@@ -492,119 +501,6 @@ export default class Event {
     }
   }
 
-  /**
-   * Résout la cible (destinataire) d'un event en évaluant la clause `for`.
-   * Supporte la valeur spéciale `playerBoucle` lorsqu'on est dans une boucle.
-   * @param {Object} event
-   * @param {Object} gameData
-   * @param {number|null} indexInLoop - index de l'itération lorsqu'utilisé en boucle
-   * @param {Object} [params={}] - paramètres passés aux expressions
-   * @returns {[Array|null, Object|null]} retourne [list, destinataireRef]
-   */
-  static getDestinataireElement(event, gameData, indexInLoop, params = {}) {
-    if (event["event"]["for"]) {
-      if (event.event.for.includes("playerBoucle")) {
-        let list = VariableType.getListSplited(
-          event["event"]["for"],
-          gameData,
-          null,
-        );
-
-        // dans le cas d'une boucle
-        let playerBoucleIndex = list.indexOf("playerBoucle");
-        if (playerBoucleIndex > -1) {
-          if (indexInLoop !== null) {
-            let player = PlayerManager.getPlayer(gameData, indexInLoop + 1);
-            params["playerBoucle"] = player;
-            list.splice(playerBoucleIndex, 1, player);
-          } else {
-            const msg = `Event ${event.id} Want to check 'playerBoucle' but does not provide any index number in iteration`;
-            eventLogger.error(msg);
-            LoggerClass.logFileLocalisation();
-            errorStack.addError(
-              msg,
-              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
-            );
-          }
-        }
-        return [
-          list,
-          VariableType.splitLogicalList(list, gameData, {
-            returnType: "ref",
-            ...params,
-          }),
-        ];
-      }
-      return [
-        null,
-        Parser.translateInnerExpression(event["event"]["for"], gameData, {
-          returnType: "ref",
-          ...params,
-        }),
-      ];
-    }
-    return [null, null];
-  }
-
-  /**
-   * Résout l'élément sender (champ `from`) pour un event.
-   * @param {Object} event
-   * @param {Object} gameData
-   * @param {Object} [params]
-   * @returns {*} référence vers l'élément sender (ou undefined)
-   */
-
-  static getSenderElement(event, gameData, indexInLoop, params = {}) {
-    if (params && params.log) {
-      eventLogger.debug("event :>> " + typeof event);
-      eventLogger.debug("gameData :>> " + typeof gameData);
-      eventLogger.debug("indexInLoop :>> " + indexInLoop);
-      eventLogger.debug("params :>> " + typeof params);
-    }
-    if (event["event"]["from"]) {
-      if (event.event.from.includes("playerBoucle")) {
-        console.log("playerBoucle :>> ");
-        let list = VariableType.getListSplited(
-          event["event"]["from"],
-          gameData,
-          params,
-        );
-
-        // dans le cas d'une boucle
-        let playerBoucleIndex = list.indexOf("playerBoucle");
-        if (playerBoucleIndex > -1) {
-          if (indexInLoop !== null) {
-            let player = PlayerManager.getPlayer(gameData, indexInLoop + 1);
-            params["playerBoucle"] = player;
-            list.splice(playerBoucleIndex, 1, player);
-          } else {
-            const msg = `Event ${event.id} Want to check 'playerBoucle' but does not provide any index number in iteration`;
-            eventLogger.error(msg);
-            LoggerClass.logFileLocalisation();
-            errorStack.addError(
-              msg,
-              LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
-            );
-          }
-        }
-        return [
-          list,
-          VariableType.splitLogicalList(list, gameData, {
-            returnType: "ref",
-            ...params,
-          }),
-        ];
-      }
-      return [
-        null,
-        Parser.translateInnerExpression(event["event"]["from"], gameData, {
-          returnType: "ref",
-          ...params,
-        }),
-      ];
-    }
-    return [null, null];
-  }
   /**
    * Récupère la valeur associée à l'event (champ `value`) après traduction.
    * @param {Object} event
