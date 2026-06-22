@@ -233,7 +233,7 @@ export default class FunctionType extends TypeInterface {
         // all args must be defined and not null
         if (value === null || value === undefined) {
           gameData.data.errors.push(
-            `getDouble() function ${i} argument is null or undefined`,
+            `getDouble() function :  argument number ${i} is null or undefined`,
           );
           return null;
         }
@@ -241,7 +241,7 @@ export default class FunctionType extends TypeInterface {
         if (i === 0) {
           if (TypeManager.getType(value) !== "array") {
             gameData.data.errors.push(
-              `getDouble() function first argument is not an array`,
+              `getDouble() function :  first argument is not an array`,
             );
             return null;
           } else {
@@ -253,7 +253,7 @@ export default class FunctionType extends TypeInterface {
         if (i != 0) {
           if (TypeManager.getType(value) !== "string") {
             gameData.data.errors.push(
-              `getDouble() function ${i} argument is not a string`,
+              `getDouble() function :  argument number ${i} is not a string`,
             );
             return null;
           } else {
@@ -297,11 +297,13 @@ export default class FunctionType extends TypeInterface {
             params,
           ); 
         }
-        values[item[string]] = item.id;
-        if (TypeManager.isDefined(item[string]) ) {
-          matches.push(values[item[string]].id);
-          matches.push(item.id);
-          delete  values[item[string]]
+        if (TypeManager.isDefined(values[string]) ) {
+          matches.push(values[string]);
+          matches.push(item.id); 
+          delete  values[string]
+        }else{
+
+        values[string] = item.id;
         }
       }
 
