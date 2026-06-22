@@ -504,7 +504,7 @@ export default class Action {
       this.boucleDataArray.length === 0
     ) {
       for (let key of Object.keys(this.giveElementsData)) {
-        this.giveElementsTo(key,this.giveElementsData[key]);
+        this.giveElementsTo(key, this.giveElementsData[key]);
       }
       return;
     }
@@ -569,7 +569,7 @@ export default class Action {
       //  {cards} -> ['cards']
       if (this.fileLogger) {
         this.fileLogger.log("keyToTransform :");
-        this.fileLogger.log(LoggerClass.pretty(keyToTransform));
+        this.fileLogger.log(LoggerClass.pretty(keyOfElementToGive));
       }
       //============================================================================
 
@@ -623,6 +623,17 @@ export default class Action {
             senderListObject,
             sender,
           } of eligibleData) {
+            if (
+              TypeManager.isDefined(sender) &&
+              (sender.value <= 0 || sender.value == null || sender.value == [])
+            ) {
+              if (this.fileLogger) {
+                this.fileLogger.log(
+                  `Sender has no resources left for key ${keyOfElementToGive} at index ${i}, skipping`,
+                );
+              }
+              continue; // Skip if sender has no resources left
+            }
             this.setDestinataireListObject(destinataireListObject);
             this.setDestinataire(destinataire);
             this.setSenderListObject(senderListObject);
@@ -635,10 +646,6 @@ export default class Action {
             this.giveElementsData = savedGiveElementsData;
           }
         }
-      } else if (sum === "*") {
-        // Mode Épuisement de la source :
-        // distribution à tous les joueurs jusqua la fin de la ressource
-        this.giveEntireElement(keyOfElementToGive, sum, eligibleData);
       } else {
         // BATCH (array) : tout donner joueur par joueur
         for (const {
@@ -724,17 +731,7 @@ export default class Action {
     }
     const destinataireObjectSave = structuredClone(destinataireObject);
 
-    // LOG ====================================
-    if (this.fileLogger) {
-      LoggerClass.logGridFromObject(
-        {
-          "Destinataire object": destinataireObject,
-          "Sender Object": senderObject,
-        },
-        "APPLICATION DES CLES ",
-        this.fileLogger,
-      );
-    }
+   
 
     // START MANIP ==========================================
 
@@ -794,16 +791,7 @@ export default class Action {
     // If WE GIVE FIXE NUMBER OF CARD
     if (keyToTransform[0] === "cards") {
       let newSenderObjectValue = structuredClone(senderObject.value);
-      if (this.fileLogger) {
-        LoggerClass.logGridFromObject(
-          {
-            "New Sender Object Value before": newSenderObjectValue,
-            "senderObject value ": senderObject.value,
-          },
-          "COPY ALL CARDS - BEFORE LOOP",
-          this.fileLogger,
-        );
-      }
+   
       for (let n = 0; n < sum; n++) {
         // Sender donne des cartes une par une à Destinataire
         if (!senderObject) {
@@ -893,7 +881,6 @@ export default class Action {
     if (this.fileLogger) {
       LoggerClass.logGridFromObject(
         {
-          "Destinataire Liste": this.destinataireListObject,
           "Destinataire Object": destinataireObject,
           Destinataire: this.destinataire,
         },
@@ -935,251 +922,7 @@ export default class Action {
       this.fileLogger.log("✅ GiveElementsTo effectué.");
       // fin logs de resultats
     }
-  }
-  giveEntireElement(keyToTransform, sum, eligibleData = []) {
-    const key = keyToTransform ? `{${keyToTransform[0]}}` : "";
-
-    if (this.fileLogger) {
-      LoggerClass.logGridFromObject(
-        { Sender: this.sender, Destinataire: this.destinataire },
-        "AVANT giveEntireElement (Distribution circulaire jusqu'à épuisement)",
-        this.fileLogger,
-      );
-    }
-
-    let beforeGameData = structuredClone(this.gameData.data);
-
-    // Si aucun joueur éligible n'est passé (appel direct hors boucle), on crée un lot unique avec le destinataire actuel
-    if (eligibleData.length === 0) {
-      eligibleData = [
-        {
-          i: this.index,
-          destinataireListObject: this.destinataireListObject,
-          destinataire: this.destinataire,
-          senderListObject: this.senderListObject,
-          sender: this.sender,
-        },
-      ];
-    }
-
-    // 1. INITIALISATION ET SAUVEGARDE DU SENDER GLOBAL =======================
-    let senderObject = null;
-    if (TypeManager.isDefined(this.sender)) {
-      if (keyToTransform[0] !== "cards") {
-        senderObject = VariableType.splitLogicalList(
-          [this.sender, ...keyToTransform],
-          this.gameData,
-          { returnType: "ref" },
-        );
-      } else {
-        senderObject = this.sender;
-      }
-      if (!TypeManager.isDefined(senderObject)) {
-        senderObject = this.sender;
-      }
-    }
-    const senderObjectSave = structuredClone(senderObject);
-
-    if (!senderObject || !TypeManager.isDefined(senderObject.value)) {
-      const msg =
-        "Cannot execute giveEntireElement: Sender object or its value is undefined.";
-      this.actionLogger.error(msg);
-      if (this.fileLogger) this.fileLogger.error(new Error(msg));
-      return;
-    }
-
-    // 2. DISTRIBUTION EN BOUCLE TANT QUE LE SENDER A DU STOCK ===================
-
-    // CAS A : LES CARTES (TABLEAUX)
-    if (keyToTransform[0] === "cards" && Array.isArray(senderObject.value)) {
-      let newSenderObjectValue = structuredClone(senderObject.value);
-      let playerIndex = 0;
-
-      // Tant qu'il reste des cartes dans le deck/la main du sender
-      while (newSenderObjectValue.length > 0) {
-        // Sélection du joueur courant de manière circulaire
-        const currentRecipient =
-          eligibleData[playerIndex % eligibleData.length];
-
-        // Résolution dynamique du destinataire object pour ce joueur précis
-        let destObj = null;
-        if (TypeManager.isDefined(currentRecipient.destinataire)) {
-          destObj = currentRecipient.destinataire; // C'est "cards", donc le destinataire lui-même
-        }
-
-        if (destObj && Array.isArray(destObj.value)) {
-          const cardToGive = newSenderObjectValue[0]; // On prend la première carte disponible
-
-          if (CardManager.getCard(this.gameData, cardToGive)) {
-            if (this.fileLogger) {
-              this.fileLogger.log(
-                `Give card id ${cardToGive} to player index ${currentRecipient.i}`,
-              );
-            }
-
-            // Sauvegarde pour les tests avant la première modification de ce destinataire
-            if (this.gameData.data.isTest && !currentRecipient.savedDest) {
-              currentRecipient.savedDest = structuredClone(destObj.value);
-            }
-
-            destObj.value.push(cardToGive);
-            newSenderObjectValue.splice(0, 1); // On retire la carte distribuée
-          } else {
-            // Sécurité si l'élément n'est pas valide, on l'enlève pour éviter une boucle infinie
-            newSenderObjectValue.splice(0, 1);
-          }
-        }
-
-        playerIndex++;
-      }
-
-      // Application de la nouvelle valeur au sender
-      senderObject.value = newSenderObjectValue;
-
-      // LOGS DE TEST POUR LES CARTES
-      if (this.gameData.data.isTest) {
-        this.actionEventForTest.diffs.push({
-          key: PlayerManager.isPlayerType(this.sender, this.gameData)
-            ? this.sender.pseudo
-            : this.event.event.from,
-          type: senderObject.type,
-          id: "f456z854e846_entire",
-          before: structuredClone(senderObjectSave.value),
-          after: structuredClone(senderObject.value),
-        });
-
-        // Diffs pour chaque joueur ayant reçu au moins une carte
-        for (const target of eligibleData) {
-          if (target.savedDest) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(
-                target.destinataire,
-                this.gameData,
-              )
-                ? target.destinataire.pseudo
-                : this.event.event.for,
-              id: "ezfu54528585_entire_loop",
-              type: senderObject.type,
-              before: target.savedDest,
-              after: structuredClone(target.destinataire.value),
-            });
-          }
-        }
-      }
-    }
-
-    // CAS B : LES RESSOURCES NUMÉRIQUES (NOMBRES)
-    else if (typeof senderObject.value === "number") {
-      let playerIndex = 0;
-      let initialSenderValue = senderObject.value;
-
-      // Tant que la ressource du sender est supérieure à 0
-      while (senderObject.value > 0) {
-        const currentRecipient =
-          eligibleData[playerIndex % eligibleData.length];
-
-        // Résolution de la propriété numérique chez le destinataire courant (ex: {player#gain#1})
-        let destObj = VariableType.splitLogicalList(
-          [currentRecipient.destinataire, ...keyToTransform],
-          this.gameData,
-          { returnType: "ref", log: false },
-        );
-
-        if (!TypeManager.isDefined(destObj)) {
-          destObj = currentRecipient.destinataire;
-        }
-
-        if (destObj && typeof destObj.value === "number") {
-          // Sauvegarde pour le test avant modification
-          if (this.gameData.data.isTest && !currentRecipient.savedDest) {
-            currentRecipient.savedDest = structuredClone(destObj.value);
-          }
-
-          destObj.value += 1;
-          senderObject.value -= 1;
-        } else {
-          // Si le destinataire n'est pas valide, on coupe pour éviter une boucle infinie
-          break;
-        }
-
-        playerIndex++;
-      }
-
-      // LOGS DE TEST POUR LES NOMBRES
-      if (this.gameData.data.isTest) {
-        this.actionEventForTest.diffs.push({
-          key: PlayerManager.isPlayerType(this.sender, this.gameData)
-            ? this.sender.pseudo
-            : this.event.event.from,
-          id: "eflokort5123_entire_num",
-          type: "number",
-          before: initialSenderValue,
-          after: senderObject.value,
-        });
-
-        for (const target of eligibleData) {
-          let destObj = VariableType.splitLogicalList(
-            [target.destinataire, ...keyToTransform],
-            this.gameData,
-            { returnType: "ref", log: false },
-          );
-          if (!TypeManager.isDefined(destObj)) destObj = target.destinataire;
-
-          if (target.savedDest !== undefined && destObj) {
-            this.actionEventForTest.diffs.push({
-              key: PlayerManager.isPlayerType(
-                target.destinataire,
-                this.gameData,
-              )
-                ? target.destinataire.pseudo
-                : this.event.event.for,
-              id: "e5443655155_entire_num_loop",
-              type: "number",
-              before: target.savedDest,
-              after: destObj.value,
-            });
-          }
-        }
-      }
-    }
-
-    // 3. SAUVEGARDE ET COMMITS VIA PLAYERMANAGER ==============================
-    PlayerManager.updatePlayerObject(
-      this.sender,
-      this.gameData,
-      this.SenderListObject,
-    );
-    for (const target of eligibleData) {
-      PlayerManager.updatePlayerObject(
-        target.destinataire,
-        this.gameData,
-        target.destinataireListObject,
-      );
-    }
-
-    // LOGS FINAUX =============================================================
-    if (this.fileLogger) {
-      LoggerClass.logGridFromObject(
-        {
-          "Sender Object Post-Distribution": senderObject,
-          Sender: this.sender,
-        },
-        "SENDER AFTER GIVE ENTIRE ELEMENT ROUND ROBIN",
-        this.fileLogger,
-      );
-      LoggerClass.logGridOldNew(
-        beforeGameData,
-        this.gameData.data,
-        this.fileLogger,
-      );
-      this.actionLogger.info(
-        "Effectué giveEntireElement en mode épuisement équitable",
-      );
-      this.fileLogger.log(
-        "✅ giveEntireElement (épuisement de la source) effectué avec succès.",
-      );
-    }
-  }
+  } 
   giveAnArrayOfElements(keyToTransform, sum) {
     const key = keyToTransform ? `{${keyToTransform[0]}}` : "";
 
