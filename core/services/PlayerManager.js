@@ -37,7 +37,8 @@ export default class PlayerManager {
       return null;
     }
     let playerIsPrevious = false;
-    for (let p of gameData.data.players) {
+    for (let i=0; i < gameData.data.players.length; i++) {
+      let p = gameData.data.players[i];
       if (p.position === currentPlayerPosition) {
         playerIsPrevious = true;
         continue;
@@ -47,7 +48,47 @@ export default class PlayerManager {
       // on utilise pas la position car elle peut être désordonné
       // et ne pas refléter l'ordre de jeu
       if (playerIsPrevious) {
+        if (i === 0) {
+          return gameData.data.players[gameData.data.players.length - 1];
+        }
+        if (i === gameData.data.players.length - 1) {
+          return gameData.data.players[0];
+        }
         return p;
+      }
+    }
+    // Valeur par défaut a retourner si on ne trouve pas de joueur statisfaisant
+    return gameData.data.players[0];
+  }
+  static getPreviousPlayer(gameData, currentPlayerPosition) {
+    if (!gameData) {
+      const msg = `Game Data is undefined in PlayerManager.getPreviousPlayer(currentPlayerPosition=${currentPlayerPosition})`;
+      playerManagerLogger.error(msg);
+
+      LoggerClass.logFileLocalisation();
+      errorStack.addError(
+        msg,
+        LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+      );
+      return null;
+    }
+    let playerIsCurrent = false;
+    // on parcours à l'envers la liste
+    for (let i = gameData.data.players.length - 1; i >= 0; i--) {
+      let p = gameData.data.players[i];
+      if (p.position === currentPlayerPosition) {
+        playerIsCurrent = true;
+        continue;
+      }
+      // permet de récupérer le joueur précédent
+      // car on est sur d'avoir croiser le joueur actuel
+      // on utilise pas la position car elle peut être désordonné
+      // et ne pas refléter l'ordre de jeu
+      if (playerIsCurrent) {
+        if (i == 0){
+          return gameData.data.players[gameData.data.players.length - 1];
+        }
+        return gameData.data.players[i - 1];
       }
     }
     // Valeur par défaut a retourner si on ne trouve pas de joueur statisfaisant

@@ -34,6 +34,7 @@ export default class Parser {
       exp.startsWith("getPlayer(") ||
       exp.startsWith("len(") ||
       exp.startsWith("not(") ||
+      exp.startsWith("firstElement(") ||
       exp.startsWith("exist(") ||
       exp.startsWith("getDouble(") 
     ) {

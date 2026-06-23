@@ -54,7 +54,7 @@ export default class Action {
     this.socket = socket;
     this.gameData = gameData;
     this.logs = logs;
-    this.boucleDataArray = null;
+    this.boucleDataArray = [];
     this.params = params;
     this.index = index;
 
@@ -498,17 +498,6 @@ export default class Action {
     }
   }
   giveElements() {
-    if (
-      !this.boucleDataArray ||
-      !Array.isArray(this.boucleDataArray) ||
-      this.boucleDataArray.length === 0
-    ) {
-      for (let key of Object.keys(this.giveElementsData)) {
-        this.giveElementsTo(key, this.giveElementsData[key]);
-      }
-      return;
-    }
-
     // 1. FILTRER les joueurs éligibles
     const eligibleData = [];
     for (let i = 0; i < this.boucleDataArray.length; i++) {
@@ -519,19 +508,32 @@ export default class Action {
           i,
           this.params,
         );
-        let boucleElement
-        if (this.event.event.for.includes("Boucle") && TypeManager.isDefined(destinataire)) {
-         boucleElement = destinataireListObject != [] || TypeManager.isDefined(destinataireListObject) ? destinataireListObject[0] : null;
-        }
+      let boucleElement;
+      if (
+        this.event.event.for.includes("Boucle") &&
+        TypeManager.isDefined(destinataire)
+      ) {
+        boucleElement =
+          destinataireListObject != [] ||
+          TypeManager.isDefined(destinataireListObject)
+            ? destinataireListObject[0]
+            : null;
+      }
       let [senderListObject, sender] = PlayerManager.getSenderElement(
         this.event,
         this.gameData,
         i,
         this.params,
       );
-      if (this.event.event.from.includes("Boucle") && TypeManager.isDefined(destinataire)) {
-         boucleElement = senderListObject != [] || TypeManager.isDefined(senderListObject) ? senderListObject[0] : null;
-        }
+      if (
+        this.event.event.from.includes("Boucle") &&
+        TypeManager.isDefined(destinataire)
+      ) {
+        boucleElement =
+          senderListObject != [] || TypeManager.isDefined(senderListObject)
+            ? senderListObject[0]
+            : null;
+      }
 
       const condition = Parser.translateInnerExpression(
         this.boucleCondition,
@@ -555,12 +557,6 @@ export default class Action {
       });
     }
 
-    if (eligibleData.length === 0) {
-      if (this.fileLogger)
-        this.fileLogger.log("No eligible recipients after filtering");
-      return;
-    }
-
     // 2. Résoudre sum pour savoir le mode de distribution
     // On prend la première clé pour déterminer le type (nombre ou array ou *)
 
@@ -579,6 +575,7 @@ export default class Action {
         this.fileLogger.log("keyToTransform :");
         this.fileLogger.log(LoggerClass.pretty(keyOfElementToGive));
       }
+
       //============================================================================
 
       let sum = Parser.translateInnerExpression(
@@ -586,7 +583,22 @@ export default class Action {
         this.gameData,
         { ...this.params, location: this.fileLogger },
       );
-      if (!TypeManager.isDefined(sum) || sum == []) {
+
+      //====================================NOT BOUCLE======================================
+
+      if (
+        !this.boucleDataArray ||
+        !Array.isArray(this.boucleDataArray) ||
+        this.boucleDataArray.length === 0 ||
+        !this.boucle
+      ) {
+        this.giveElementsTo(keyOfElementToGive, sum);
+
+        continue;
+      }
+
+      //============================================================================
+      if (!TypeManager.isDefined(sum) || sum == []) {
         if (this.fileLogger) {
           this.fileLogger.log(
             `Sum is undefined or empty for key ${keyOfElementToGive}, skipping`,
@@ -598,16 +610,21 @@ export default class Action {
       if (this.fileLogger) {
         this.fileLogger.log("sum");
         this.fileLogger.log(LoggerClass.pretty(sum));
-        LoggerClass.logGridFromObject(eligibleData, "Eligible Data", this.fileLogger);
+        LoggerClass.logGridFromObject(
+          eligibleData,
+          "Eligible Data",
+          this.fileLogger,
+        );
       }
-      const isRoundRobin = !Array.isArray(sum) || (keyOfElementToGive[0]== "cards" && sum === "*");
+      const isRoundRobin =
+        !Array.isArray(sum) ||
+        (keyOfElementToGive[0] == "cards" && sum === "*");
 
       if (isRoundRobin && !this.giveElementsData[key].includes("Boucle")) {
         // ROUND-ROBIN : 1 unité par joueur à chaque tour
         // pour int
 
-        let iterationCount = parseInt(sum) ||300 ; // Default to number of players if sum is not a valid number
- 
+        let iterationCount = parseInt(sum) || 300; // Default to number of players if sum is not a valid number
 
         for (let turn = 0; turn < iterationCount; turn++) {
           for (const {
@@ -616,7 +633,7 @@ export default class Action {
             destinataire,
             senderListObject,
             sender,
-          } of eligibleData) { 
+          } of eligibleData) {
             if (
               TypeManager.isDefined(sender) &&
               (sender.value <= 0 || sender.value == null || sender.value == [])
@@ -634,13 +651,12 @@ export default class Action {
             this.setSender(sender);
             this.setIndex(i);
             // On override temporairement giveElementsData pour donner 1 à la fois
-            const savedGiveElementsData = this.giveElementsData; 
+            const savedGiveElementsData = this.giveElementsData;
             this.giveElementsTo(keyOfElementToGive, 1);
             this.giveElementsData = savedGiveElementsData;
           }
         }
       } else {
-       
         // BATCH (array) : tout donner joueur par joueur
         for (const {
           i,
@@ -650,19 +666,20 @@ export default class Action {
           sender,
           boucleElement,
         } of eligibleData) {
-   
           this.setDestinataireListObject(destinataireListObject);
           this.setDestinataire(destinataire);
           this.setSenderListObject(senderListObject);
           this.setSender(sender);
           this.setIndex(i);
-                 if (
-            this.giveElementsData[key].includes("Boucle")
-          ){
-             sum = Parser.translateInnerExpression(
+          if (this.giveElementsData[key].includes("Boucle")) {
+            sum = Parser.translateInnerExpression(
               this.giveElementsData[key],
               this.gameData,
-              { ...this.params, location: this.fileLogger, playerBoucle: boucleElement },
+              {
+                ...this.params,
+                location: this.fileLogger,
+                playerBoucle: boucleElement,
+              },
             );
           }
           this.giveElementsTo(keyOfElementToGive, sum);
@@ -738,11 +755,7 @@ export default class Action {
     }
     const destinataireObjectSave = structuredClone(destinataireObject);
 
-   
-
     // START MANIP ==========================================
-
-   
 
     // IF THERE IS SENDER
     if (
@@ -905,9 +918,12 @@ export default class Action {
     }
 
     // If WE GIVE FIXE NUMBER OF CARD
-    if (keyToTransform[0] === "cards" && TypeManager.getType(sum) === "number") {
+    if (
+      keyToTransform[0] === "cards" &&
+      TypeManager.getType(sum) === "number"
+    ) {
       let newSenderObjectValue = structuredClone(senderObject.value);
-   
+
       for (let n = 0; n < sum; n++) {
         // Sender donne des cartes une par une à Destinataire
         if (!senderObject) {
@@ -963,7 +979,6 @@ export default class Action {
         });
       }
     }
-   
 
     // END OF  IF WE WANT TO GIVE A SPECIFIC QUANTITY
 
@@ -999,7 +1014,7 @@ export default class Action {
         "SENDER AFTER GIVE ELEMENT",
         this.fileLogger,
       );
- 
+
       if (this.index) {
         this.fileLogger.log("Resultat des modifications ");
         for (let player of this.gameData.data.players) {
@@ -1011,11 +1026,9 @@ export default class Action {
         }
       }
 
-     
-
       this.actionLogger.info("Effectué ");
       this.fileLogger.log("✅ GiveElementsTo effectué.");
       // fin logs de resultats
     }
-  }  
+  }
 }

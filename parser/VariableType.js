@@ -168,6 +168,8 @@ export default class VariableType extends TypeInterface {
           value = elt;
         } else if (elt === "startPlayer") {
           value = PlayerManager.getStartPlayer(gameData);
+        } else if (elt === "previousPlayer") {
+          value = PlayerManager.getPreviousPlayer(gameData);
         } else if (elt === "allPlayersInGame") {
           value = gameData.data.players;
         } else if (elt === "topDiscardCard") {

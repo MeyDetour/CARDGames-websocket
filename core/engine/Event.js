@@ -169,6 +169,11 @@ export default class Event {
     let action = this.getAction(event, gameData);
     let value = this.getValue(event);
     let giveElements = this.getGiveElements(event, gameData);
+    if (fileLogger) {
+      fileLogger.log("Action: " + action);
+      fileLogger.log("Value: " + value);
+      fileLogger.log("Give Elements: " + LoggerClass.pretty(giveElements));
+    }
 
     const actionObject = new Action(
       fileLogger,
@@ -203,8 +208,11 @@ export default class Event {
         params,
         location: fileLogger,
       });
+
+      actionObject.setBoucleDataArray(elts);
       //   eventLogger.debug("Liste des elements a parcourir")
       if (globalEventDetailLog && fileLogger) {
+        LoggerClass.logGridFromObject(actionObject.getThisObject(), "L'objet action", fileLogger);
         fileLogger.section(" Il y a  " + elts.length + " elements");
       }
       if (!Array.isArray(elts)){
@@ -222,8 +230,7 @@ export default class Event {
             event["id"],
         );
         return null;
-      }
-      actionObject.setBoucleDataArray(elts);
+      } 
       // dont execute give element because we want to 
       // give element one per one in another boucle, if we give 5 cards
       // to each player we want to give, to player1, player2 ,player3, player1

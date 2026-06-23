@@ -20,6 +20,9 @@ export default class FunctionType extends TypeInterface {
     if (exp.startsWith("not(")) {
       return exp.substring(4, exp.length - 1);
     }
+    if (exp.startsWith("firstElement(")) {
+      return exp.substring(13, exp.length - 1);
+    }
     if (exp.startsWith("exist(")) {
       return exp.substring(6, exp.length - 1);
     }
@@ -98,6 +101,40 @@ export default class FunctionType extends TypeInterface {
       let result = 0;
       if (typeof value === "string" || Array.isArray(value)) {
         result = value.length;
+      }
+      if (params.conditionDetailsForTest) {
+        params.conditionDetailsForTest.result = result;
+      }
+      if (params.fileLogger) {
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) +
+            `FunctionType result: ${result}`,
+        );
+      }
+      return result;
+    } if (str.startsWith("firstElement(")) {
+      // enlever le tag apres avoir verifier dans quel if renvoyer l'expression, ne pas fusionner avec les autres
+      str = FunctionType.removeTag(str);
+      // LOG DETAIL FOR TEST
+      if (currentDetail) {
+        currentDetail.operator = "firstElement";
+        currentDetail.left = {};
+      }
+      let value = Parser.translateInnerExpression(str, gameData, {
+        ...params,
+        conditionDetailsForTest: currentDetail ? currentDetail.left : null,
+        depth: params.depth + 10,
+      });
+
+      if (params.fileLogger) {
+        params.fileLogger.log(
+          Parser.getDepthIndentation(params.depth) +
+            `Action is firstElement() with value : ${value}   `,
+        );
+      }
+      let result = null;
+      if (Array.isArray(value)) {
+        result = value.length > 0 ? value[0] : null;
       }
       if (params.conditionDetailsForTest) {
         params.conditionDetailsForTest.result = result;
