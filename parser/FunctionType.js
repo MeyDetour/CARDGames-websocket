@@ -5,6 +5,7 @@ import PlayerManager from "../core/services/PlayerManager.js";
 import { LoggerClass } from "../core/logger/logger.js";
 import { TypeManager } from "../core/services/helper/TypeManager.js";
 import VariableType from "./VariableType.js";
+import CardManager from "../core/services/CardManager.js";
 
 export default class FunctionType extends TypeInterface {
   static removeTag(exp) {
@@ -125,7 +126,7 @@ export default class FunctionType extends TypeInterface {
         conditionDetailsForTest: currentDetail ? currentDetail.left : null,
         depth: params.depth + 10,
       });
-
+      
       if (params.fileLogger) {
         params.fileLogger.log(
           Parser.getDepthIndentation(params.depth) +
@@ -134,7 +135,13 @@ export default class FunctionType extends TypeInterface {
       }
       let result = null;
       if (Array.isArray(value)) {
+        if (value.every((item) => TypeManager.isDefined(gameData.data.cards[item]))) {
+          value = value.map((item) => gameData.data.cards[item]);
+        }
         result = value.length > 0 ? value[0] : null;
+        if(CardManager.isTypeOfCard(gameData,result)) {
+          result = result.addedAttributs ?? {};
+        }
       }
       if (params.conditionDetailsForTest) {
         params.conditionDetailsForTest.result = result;

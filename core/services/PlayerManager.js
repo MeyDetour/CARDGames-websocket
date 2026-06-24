@@ -24,9 +24,9 @@ export default class PlayerManager {
     }
     return gameData.data.players[playerPosition];
   }
-  static getNextPlayer(gameData, currentPlayerPosition) {
-    if (!gameData) {
-      const msg = `Game Data is undefined in PlayerManager.getNextPlayer(currentPlayerPosition=${currentPlayerPosition})`;
+static getNextPlayer(gameData, currentPlayerPosition) {
+    if (!gameData || !gameData.data || !gameData.data.players) {
+      const msg = `Game Data or players list is undefined in PlayerManager.getNextPlayer(currentPlayerPosition=${currentPlayerPosition})`;
       playerManagerLogger.error(msg);
 
       LoggerClass.logFileLocalisation();
@@ -36,29 +36,18 @@ export default class PlayerManager {
       );
       return null;
     }
-    let playerIsPrevious = false;
-    for (let i = 0; i < gameData.data.players.length; i++) {
-      let p = gameData.data.players[i];
-      if (p.position === currentPlayerPosition) {
-        playerIsPrevious = true;
-        continue;
-      }
-      // permet de récupérer le joueur suivant
-      // car on est sur d'avoir croiser le joueur actuel
-      // on utilise pas la position car elle peut être désordonné
-      // et ne pas refléter l'ordre de jeu
-      if (playerIsPrevious) {
-        if (i === 0) {
-          return gameData.data.players[gameData.data.players.length - 1];
-        }
-        if (i === gameData.data.players.length - 1) {
-          return gameData.data.players[0];
-        }
-        return p;
-      }
+
+    const players = gameData.data.players;
+ 
+    const currentIndex = players.findIndex(p => p.position === currentPlayerPosition);
+ 
+    if (currentIndex === -1) {
+      return players[0];
     }
-    // Valeur par défaut a retourner si on ne trouve pas de joueur statisfaisant
-    return gameData.data.players[0];
+ 
+    const nextIndex = (currentIndex + 1) % players.length;
+
+    return players[nextIndex];
   }
   static getPreviousPlayer(gameData, currentPlayerPosition) {
     if (!gameData || !gameData.data || !gameData.data.players) {

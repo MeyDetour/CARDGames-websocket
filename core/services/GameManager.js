@@ -104,8 +104,7 @@ export default class GameManager {
         break;
       }
     } while (
-      nextP.attachedEventForTour.value.includes("skipPlayerTour") ||
-      !PlayerManager.isPlayerActifInGame(nextP)
+      nextP.attachedEventForTour.value.includes("skipPlayerTour")  
     );
     if (gameData.data.isTest) {
       gameData.data.testLogs.push({
@@ -232,8 +231,12 @@ export default class GameManager {
     //check actions for player
 
     Evaluator.loadDeclencheur(gameData, socket, params);
+    
     if (gameData.data.state.value !== "endOfGame") {
       Evaluator.loadWin(gameData, socket);
+    }
+    if (gameData.data.state.value !== "endOfGame") {
+      Evaluator.loadLoose(gameData, socket);
     }
 
     // on reverifie a chaque fois car chaque elt peut changer le status peut faire changer l'état du jeu

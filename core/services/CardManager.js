@@ -1,6 +1,7 @@
 import { roomManager } from "./RoomManager.js";
 import { Logger, LoggerClass } from "../logger/logger.js";
 import CG from "console-grid";
+import { TypeManager } from "./helper/TypeManager.js";
 
 const cardManagerLogger = Logger("CardManager");
 export default class CardManager {
@@ -8,6 +9,14 @@ export default class CardManager {
   static getCard(gameData, cardId) {
     console.log("search cardid " + cardId + " in " + gameData.data["cards"]);
     return gameData.data["cards"][cardId.toString()];
+  }  static isTypeOfCard(gameData,element) {
+    if (!TypeManager.isDefined(element) || !TypeManager.isDefined(element.id)) {
+      return false
+    }
+    if (gameData.data["cards"][element.id] !== undefined) {
+      return true
+    }
+    return false
   }
   static dropCard(gameData) {
     if (gameData.data["deck"].value.length > 0) {

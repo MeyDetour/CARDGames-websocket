@@ -119,13 +119,18 @@ export default class ComparaisonType extends TypeInterface {
     const comparators = ["differentPlayer", "samePlayer"];
     let a = list[0];
     let b = list[2];
-    if (!TypeManager.isDefined(a) || !TypeManager.isDefined(b)) {
-      const msg = `A et B are not found in Comparaison Type got: a=${a} b=${b}`;
-      comparatortypeLogger.error(msg);
-      LoggerClass.logFileLocalisation();
-      errorStack.addError(msg, LoggerClass.logFileLocalisation());
-      return false;
-    }
+    
+
+    // pas besoin de verifier si a et b sont définis, 
+    // car n'importe quel fonction peut renvoyer naturellement undefined
+    
+    //if (!TypeManager.isDefined(a) || !TypeManager.isDefined(b)) {
+    //  const msg = `A et B are not found in Comparaison Type got: a=${a} b=${b}`;
+    //  comparatortypeLogger.error(msg);
+    //  LoggerClass.logFileLocalisation();
+    //  errorStack.addError(msg, LoggerClass.logFileLocalisation());
+    //  return false;
+    //}
 
     let comparateur = list[1];
     if (stringComparators.includes(comparateur)) {
@@ -134,9 +139,7 @@ export default class ComparaisonType extends TypeInterface {
     if (numberComparators.includes(comparateur)) {
       let a = parseInt(list[0]);
       let b = parseInt(list[2]);
-      if (isNaN(a) || isNaN(b)) {
-        return false;
-      }
+   
       if (comparateur === "isEqualNumber") return a === b;
       if (comparateur === "isNotEqualNumber") return a !== b;
       if (comparateur === "isInferiorOrEqual") return a <= b;

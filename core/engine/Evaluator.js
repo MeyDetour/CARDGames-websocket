@@ -644,6 +644,7 @@ Event._eventCallCounts = {}
         fileLogger.log(LoggerClass.pretty(winners.map((w) => w.id)));
       }
       // si il y a vainqueur alors victoire
+      // si il y a vainqueur alors victoire
       if (winners.length > 0) {
         victory = true;
         if (fileLogger)
@@ -662,23 +663,37 @@ Event._eventCallCounts = {}
             ` Tous les éléments doivent satisfaire la condition mais ce n'est pas le cas.`,
           );
       }
+      if (!gameData.data.losers) gameData.data.losers = { type: "array", value: [] };
+      if (!Array.isArray(gameData.data.losers.value)) gameData.data.losers.value = [];
+      // --- CAS 1 : VICTOIRE COLLECTIVE (Fin de la partie pour tout le monde) ---
       if (winParams.applyOnAllPlayers && victory) {
         if (fileLogger) fileLogger.log(` Victoire collective, fin de partie.`);
         gameData.data.state.value = "endOfGame";
         gameData.data.winners.value = winners;
-        for (let p of gameData.data.players) {
-          p.haswin.value = winners.map((w) => w.id).includes(p.id);
-          p.hasloose.value = !winners.map((w) => w.id).includes(p.id);
-          PlayerManager.updatePlayerObject(p, gameData);
-        }
-        if (fileLogger)
-          fileLogger.log(
-            `Mise à jour des joueurs et envoie d'un signal de fin de partie.`,
-          );
-        gameData.data.logs.push("Victoire collective des joueurs !");
+        let losers = [];
+        const winnerIds = winners.map((w) => w.id);
 
+        for (let p of gameData.data.players) {
+          p.haswin.value = winnerIds.includes(p.id);
+          p.hasloose.value = !winnerIds.includes(p.id);
+          PlayerManager.updatePlayerObject(p, gameData);
+
+          if (p.haswin.value) {
+            socket.to(p.socketID).emit("playerWin", { gameData, player: p });
+          } else {
+            losers.push(p);
+            socket.to(p.socketID).emit("playerLoose", { gameData, player: p });
+          }
+        }
+        gameData.data.losers.value = losers;
+        gameData.data.logs.push("Victoire collective des joueurs !");
+        
+        // On envoie le signal de fin globale à TOUTE la room (sans exclure personne)
+        socket.emit("gameEnd", { gameData });
         socket.to(gameData.roomId).emit("gameEnd", { gameData });
       }
+
+      // --- CAS 2 : VICTOIRE INDIVIDUELLE (La partie continue ou s'arrête par joueur) ---
       if (!winParams.applyOnAllPlayers && victory) {
         if (fileLogger)
           fileLogger.log(
@@ -689,35 +704,41 @@ Event._eventCallCounts = {}
         }
         gameData.data.winners.value = [
           ...gameData.data.winners.value,
-          ...winners,
+          ...winners
         ];
+        
         for (let p of winners) {
           p.haswin.value = true;
-
-          if (fileLogger)
-            fileLogger.log(
-              ` Joueur ${p.id} a gagné, mise à jour de son objet joueur. et envoie d'un signal`,
-            );
-
           PlayerManager.updatePlayerObject(p, gameData);
+          
           let newGameData = roomManager.getRoom(gameData.roomId);
           newGameData.data.logs.push(`Joueur ${p.pseudo} a gagné.`);
-          socket
-            .to(p.socketID)
-            .emit("playerWin", { gameData: newGameData, player: p });
+          
+          // Notification individuelle du gagnant
+          socket.to(p.socketID).emit("playerWin", { gameData: newGameData, player: p });
         }
+        gameData.data.losers.value = gameData.data.players.filter(p => !p.haswin.value);
       }
-      if (PlayerManager.allPlayerHasFinished(gameData)) {
+
+      // --- CAS 3 : TOUS LES JOUEURS ONT TERMINÉ (Sécurité de fin de jeu) ---
+      // On ajoute un "&& !victory" pour éviter d'émettre deux fois si le Cas 1 a déjà tout clôturé
+      if (!victory && PlayerManager.allPlayerHasFinished(gameData)) {
         if (fileLogger)
           fileLogger.log(" Tous les joueurs ont terminé, fin de partie.");
         gameData.data.state.value = "endOfGame";
+        let losers = [];
         for (let p of gameData.data.players) {
           if (!p.haswin.value) {
             p.hasloose.value = true;
+            losers.push(p);
           }
           PlayerManager.updatePlayerObject(p, gameData);
+          socket.to(p.socketID).emit("playerLoose", { gameData, player: p });
         }
+        gameData.data.losers.value = losers;
         gameData.data.logs.push("Tous les joueurs ont terminé, fin de partie.");
+        
+        socket.emit("gameEnd", { gameData });
         socket.to(gameData.roomId).emit("gameEnd", { gameData });
       }
     } else {
@@ -735,12 +756,15 @@ Event._eventCallCounts = {}
         if (fileLogger)
           fileLogger.log(` Condition de victoire remplie, fin de partie.`);
         gameData.data.state.value = "endOfGame";
+        if (!gameData.data.losers) gameData.data.losers = { type: "array", value: [] };
         for (let p of gameData.data.players) {
           p.haswin.value = true;
+          
           gameData.data.winners.value = gameData.data.winners.value || [];
           gameData.data.winners.value.push(p);
           PlayerManager.updatePlayerObject(p, gameData);
         }
+        gameData.data.losers.value = [];
         gameData.data.logs.push("Victoire globale des joueurs !");
         socket.to(gameData.roomId).emit("gameEnd", { gameData });
       }
@@ -759,6 +783,260 @@ Event._eventCallCounts = {}
       return "====================================================LOAD GLOBAL VALUE STATIC=========================";
     if (type === "loadWin")
       return "===============================================================================LOAD WIN==============";
+    if (type === "loadLoose")
+      return "===============================================================================LOAD LOOSE==============";
     return "";
+  }
+  static loadLoose(gameData, socket) {
+    evaluatorLogger.info(this.evaluatorLogTitle("loadLoose"));
+    let fileLogger = null;
+    if (process.env.ENGINE_FILE_LOG !== "false") {
+      fileLogger = FileLogger.create(["LOAD LOOSE", "====================="]);
+      if (fileLogger) {
+        evaluatorLogger.info(
+          `[fileLogger] Log file created: ${fileLogger.filepath}`,
+        );
+        fileLogger.log("Début de loadLoose");
+      }
+    }
+
+    let looseParams = gameData.roomInDb.events.loose;
+    if (!looseParams) {
+      const msg = "Erreur cannot find loose parameters";
+      evaluatorLogger.warn(msg);
+      if (fileLogger) {
+        fileLogger.log(" Paramètres de défaite non trouvés");
+        fileLogger.error(new Error(msg), "Evaluator.js  -->  loadLoose()");
+      }
+      return;
+    }
+    if (!looseParams.condition) {
+      const msg = "There is loose parameters but no condition parameters";
+      evaluatorLogger.warn(msg);
+      if (fileLogger) {
+        fileLogger.log(" Paramètre 'condition' manquant dans looseParams");
+        fileLogger.error(new Error(msg), "Evaluator.js  -->  loadLoose()");
+      }
+      return;
+    }
+
+    if (fileLogger) {
+      fileLogger.log(" Paramètres de défaite :");
+      fileLogger.log(LoggerClass.pretty(looseParams));
+    }
+
+    let allPlayerRespectCondition = true;
+    let defeat = false;
+    let losers = [];
+
+    if (fileLogger)
+      fileLogger.log(" Analyse de la boucle : " + looseParams.boucle);
+    if (looseParams.boucle) {
+      let elts = Parser.translateInnerExpression(looseParams.boucle, gameData, {
+        precedentFileLogger: fileLogger,
+      });
+
+      if (fileLogger) {
+        fileLogger.log(" Elements de la boucle");
+        fileLogger.log(LoggerClass.pretty(elts));
+      }
+      if (!Array.isArray(elts)) {
+        new AppError(
+          socket,
+          "Cannot obtain array with value " + looseParams.boucle,
+        );
+        evaluatorLogger.error(
+          "Cannot obtain array with value " + looseParams.boucle,
+        );
+        if (fileLogger) {
+          fileLogger.error(
+            new Error("Cannot obtain array with value " + looseParams.boucle),
+            "Evaluator.js  -->  loadLoose()",
+          );
+          fileLogger.log(
+            LoggerClass.pretty(LoggerClass.getCallerLocation().reverse()),
+          );
+        }
+        LoggerClass.logFileLocalisation();
+        return null;
+      }
+
+      if (fileLogger) fileLogger.log(" Exécution de la boucle");
+      for (let i = 0; i < elts.length; i++) {
+        if (looseParams.condition.includes("playerBoucle")) {
+          let player = PlayerManager.getPlayer(gameData, i + 1);
+          let result = Parser.translateInnerExpression(
+            looseParams.condition,
+            gameData,
+            {
+              playerBoucle: player,
+              precedentFileLogger: fileLogger,
+            },
+          );
+          if (fileLogger) {
+            fileLogger.log(
+              ` Condition evaluated for playerBoucle ${player.id} - hasloose=${player.hasloose.value}: IsLoser ? ${result}`,
+            );
+            fileLogger.log(
+              ` Résultat condition pour playerBoucle ${player.id}: ${result}`,
+            );
+
+            fileLogger.log(" Perdants potentiels :");
+            fileLogger.log(LoggerClass.pretty(losers.map((l) => l.id)));
+          }
+          if (!result) {
+            allPlayerRespectCondition = false;
+          }
+          if (
+            result &&
+            !losers.map((l) => l.id).includes(player.id) &&
+            !player.hasloose.value
+          ) {
+            losers.push(player);
+            if (fileLogger)
+              fileLogger.log(` Joueur ajouté aux perdants: ${player.id}`);
+          }
+        }
+      }
+      if (fileLogger) {
+        fileLogger.log(" Perdants potentiels finaux :");
+        fileLogger.log(LoggerClass.pretty(losers.map((l) => l.id)));
+      }
+
+      // Si au moins un joueur remplit la condition de défaite
+      if (losers.length > 0) {
+        defeat = true;
+        if (fileLogger)
+          fileLogger.log(
+            ` Il y a des perdants: ${losers.map((l) => l.id).join(",")}`,
+          );
+      }
+      // Si tous les éléments devaient satisfaire la condition
+      if (
+        looseParams.allElementOfBoucleMustSatisyCondition &&
+        losers.length != elts.length
+      ) {
+        defeat = false;
+        if (fileLogger)
+          fileLogger.log(
+            ` Tous les éléments doivent satisfaire la condition de défaite mais ce n'est pas le cas.`,
+          );
+      }
+
+      // Initialisations sécurisées des tableaux
+      if (!gameData.data.losers) gameData.data.losers = { type: "array", value: [] };
+      if (!Array.isArray(gameData.data.losers.value)) gameData.data.losers.value = [];
+      if (!gameData.data.winners) gameData.data.winners = { type: "array", value: [] };
+      if (!Array.isArray(gameData.data.winners.value)) gameData.data.winners.value = [];
+
+      // --- CAS 1 : DÉFAITE COLLECTIVE (Fin de la partie suite à une défaite globale) ---
+      if (looseParams.applyOnAllPlayers && defeat) {
+        if (fileLogger) fileLogger.log(` Défaite collective, fin de partie.`);
+        gameData.data.state.value = "endOfGame";
+        gameData.data.losers.value = losers;
+        
+        let winners = [];
+        const loserIds = losers.map((l) => l.id);
+
+        for (let p of gameData.data.players) {
+          p.hasloose.value = loserIds.includes(p.id); 
+          PlayerManager.updatePlayerObject(p, gameData);
+
+          if (p.hasloose.value) {
+            socket.to(p.socketID).emit("playerLoose", { gameData, player: p });
+          } else {
+            winners.push(p);
+            socket.to(p.socketID).emit("playerWin", { gameData, player: p });
+          }
+        }
+        gameData.data.winners.value = winners;
+        gameData.data.logs.push("Défaite collective des joueurs !");
+        
+        socket.emit("gameEnd", { gameData });
+        socket.to(gameData.roomId).emit("gameEnd", { gameData });
+      }
+
+      // --- CAS 2 : DÉFAITE INDIVIDUELLE (Un ou plusieurs joueurs perdent, les autres continuent) ---
+      if (!looseParams.applyOnAllPlayers && defeat) {
+        if (fileLogger)
+          fileLogger.log(
+            ` Défaite individuelle, perdants: ${losers.map((l) => l.id).join(",")}`,
+          );
+        
+        gameData.data.losers.value = [
+          ...gameData.data.losers.value,
+          ...losers
+        ];
+        
+        for (let p of losers) {
+          p.hasloose.value = true; 
+          PlayerManager.updatePlayerObject(p, gameData);
+           
+          gameData.data.logs.push(`Joueur ${p.pseudo} a perdu.`);
+          
+          // Notification individuelle du perdant
+          socket.to(p.socketID).emit("playerLoose", { gameData, player: p });
+        }   
+         for (let p of gameData.data.players) {
+          if (!p.hasloose.value) {
+            p.haswin.value = true;
+            gameData.data.winners.value.push(p);
+            socket.to(p.socketID).emit("playerWin", { gameData, player: p });
+          } 
+        }
+      }
+
+      // --- CAS 3 : SÉCURITÉ SI TOUS LES JOUEURS ONT TERMINÉ ---
+      if (!defeat && PlayerManager.allPlayerHasFinished(gameData)) {
+        if (fileLogger)
+          fileLogger.log(" Tous les joueurs ont terminé, fin de partie.");
+        gameData.data.state.value = "endOfGame";
+        let endLosers = [];
+        for (let p of gameData.data.players) {
+          if (!p.haswin.value) {
+            p.hasloose.value = true; 
+            endLosers.push(p);
+          }
+          PlayerManager.updatePlayerObject(p, gameData);
+          socket.to(p.socketID).emit("playerLoose", { gameData, player: p });
+        }
+        gameData.data.losers.value = endLosers;
+        gameData.data.logs.push("Tous les joueurs ont terminé, fin de partie.");
+        
+        socket.emit("gameEnd", { gameData });
+        socket.to(gameData.roomId).emit("gameEnd", { gameData });
+      }
+    } else {
+      // Évaluation directe sans boucle
+      if (fileLogger)
+        fileLogger.log(" Pas de boucle, évaluation directe de la condition");
+      let result = Parser.translateInnerExpression(
+        looseParams.condition,
+        gameData,
+        {
+          precedentFileLogger: fileLogger,
+        },
+      );
+      if (fileLogger) fileLogger.log(` Résultat de la condition: ${result}`);
+      if (result) {
+        if (fileLogger)
+          fileLogger.log(` Condition de défaite remplie, fin de partie.`);
+        gameData.data.state.value = "endOfGame";
+        
+        if (!gameData.data.winners) gameData.data.winners = { type: "array", value: [] };
+        gameData.data.losers.value = gameData.data.losers.value || [];
+        
+        for (let p of gameData.data.players) {
+          p.hasloose.value = true; 
+          gameData.data.losers.value.push(p);
+          PlayerManager.updatePlayerObject(p, gameData);
+        }
+        gameData.data.winners.value = [];
+        gameData.data.logs.push("Défaite globale des joueurs !");
+        socket.to(gameData.roomId).emit("gameEnd", { gameData });
+      }
+    }
+
+    console.log(gameData.data.state);
   }
 }

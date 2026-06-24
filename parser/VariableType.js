@@ -362,11 +362,7 @@ export default class VariableType extends TypeInterface {
           );
           value = null;
         }
-        // dans le cas d'une liste de cartes
-        if (TypeManager.isDefined(value) && TypeManager.isDefined(value.type) && value.type=="cardList") {
-
-          value = value.value.map((cardId) => gameData.data.cards[cardId]);
-        }
+       
         // si on a un objet avec "value", 
         // on prend la valeur sauf si on veut le ref
         if (
