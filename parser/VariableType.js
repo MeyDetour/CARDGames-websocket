@@ -149,6 +149,7 @@ export default class VariableType extends TypeInterface {
     }
     let value = null;
     if (!Array.isArray(list)) return null;
+    if (!TypeManager.isDefined(list[0])) return null;
     for (let i = 0; i < list.length; i++) {
       let elt = list[i];
 
@@ -169,7 +170,9 @@ export default class VariableType extends TypeInterface {
         } else if (elt === "startPlayer") {
           value = PlayerManager.getStartPlayer(gameData);
         } else if (elt === "previousPlayer") {
-          value = PlayerManager.getPreviousPlayer(gameData);
+
+          let currentPlayer = PlayerManager.getPlayerWithId(gameData, params.currentPlayer);
+          value = PlayerManager.getPreviousPlayer(gameData, currentPlayer.position);
         } else if (elt === "allPlayersInGame") {
           value = gameData.data.players;
         } else if (elt === "topDiscardCard") {
@@ -341,8 +344,11 @@ export default class VariableType extends TypeInterface {
           }
         }
       } else {
+        // EXecution une fois qu'on a trouv" la base
         value = value[elt];
-        if (!TypeManager.isDefined(value) || value == null) {
+
+        // erreur si ca n'existe pas
+        if (!TypeManager.isDefined(value) ) {
           console.warn(
             elt +
               " property is null search :" +
@@ -356,6 +362,13 @@ export default class VariableType extends TypeInterface {
           );
           value = null;
         }
+        // dans le cas d'une liste de cartes
+        if (TypeManager.isDefined(value) && TypeManager.isDefined(value.type) && value.type=="cardList") {
+
+          value = value.value.map((cardId) => gameData.data.cards[cardId]);
+        }
+        // si on a un objet avec "value", 
+        // on prend la valeur sauf si on veut le ref
         if (
           TypeManager.isDefined(value) &&
           value.value != null &&
@@ -363,6 +376,8 @@ export default class VariableType extends TypeInterface {
         ) {
           value = value.value;
         }
+        // si on a un objet avec "value" et qu'on veut le ref, 
+        // on prend l'objet
         if (
           TypeManager.isDefined(value) &&
           typeof value.value == "object" &&

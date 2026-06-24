@@ -86,7 +86,7 @@ export default class Parser {
       return null;
     }
     if (typeof str == "string") {
-      str = str.replaceAll(/[\[\]&]+/g, "");
+    str = str.replaceAll(/\s+/g, ""); 
     }
     let type = Parser.getType(str, gameData);
     if (params.conditionDetailsForTest){

@@ -822,7 +822,7 @@ export default class Action {
           " with value: " +
           JSON.stringify(sum) +
           " Error in key " +
-          key;
+          keyToTransform;
         this.actionLogger.error(msg);
         LoggerClass.logFileLocalisation();
         if (this.fileLogger) {
